@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "PSPF 2.0: Run Dev (Safari Default)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/pspf-explorer-2.0",
+      "serverReadyAction": {
+        "pattern": "Local:\\s+(https?://\\S+)",
+        "uriFormat": "%s",
+        "action": "openExternally"
+      }
+    },
+    {
+      "name": "PSPF 2.0: Debug in Chrome (Start Dev)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/pspf-explorer-2.0/src",
+      "preLaunchTask": "dev: vite"
+    },
+    {
+      "name": "PSPF 2.0: Debug in Chrome (Attach to Running Dev)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/pspf-explorer-2.0/src"
+    }
+  ]
+}

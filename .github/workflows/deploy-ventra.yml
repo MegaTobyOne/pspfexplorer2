@@ -1,0 +1,59 @@
+name: Deploy to Ventra
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-ventra
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:run
+      - run: npx playwright install --with-deps chromium
+      - name: Build production artifact
+        env:
+          PSPF_BASE: /
+        run: npm run build
+      - run: npm run perf:budget
+      - run: npm run test:e2e:prod -- --project=chromium tests/e2e/smoke.spec.ts tests/e2e/navigation.spec.ts
+      - name: Generate SBOM
+        run: npm run sbom
+      - name: Stage SBOM into dist
+        run: cp sbom.json dist/sbom.json
+      - name: Setup SSH key
+        env:
+          VENTRA_SSH_KEY: ${{ secrets.VENTRA_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VENTRA_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Add host key
+        env:
+          VENTRA_HOST: ${{ secrets.VENTRA_HOST }}
+          VENTRA_PORT: ${{ secrets.VENTRA_PORT }}
+        run: |
+          ssh-keyscan -p "${VENTRA_PORT:-22}" "$VENTRA_HOST" >> ~/.ssh/known_hosts
+      - name: Deploy dist to Ventra
+        env:
+          VENTRA_HOST: ${{ secrets.VENTRA_HOST }}
+          VENTRA_PORT: ${{ secrets.VENTRA_PORT }}
+          VENTRA_USER: ${{ secrets.VENTRA_USER }}
+          VENTRA_PATH: ${{ secrets.VENTRA_PATH }}
+        run: |
+          rsync -az --delete -e "ssh -p ${VENTRA_PORT:-22}" dist/ "$VENTRA_USER@$VENTRA_HOST:$VENTRA_PATH/"

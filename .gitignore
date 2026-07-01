@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build and cache outputs
+dist/
+coverage/
+.vite/
+
+# Test artefacts
+playwright-report/
+test-results/
+
+# Security and release artefacts (generated)
+sbom.json
+
+# Local environment and logs
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor settings (local only)
+.idea/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Accidental duplicate/suffixed files from Finder/merge tools
+* 2.*

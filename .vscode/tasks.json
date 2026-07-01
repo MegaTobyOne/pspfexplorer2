@@ -1,0 +1,76 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev: vite",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/pspf-explorer-2.0"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^(?!x)x$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^> pspf-explorer-2-0@",
+          "endsPattern": "Local:\\s+https?://"
+        }
+      }
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "npm run lint",
+      "options": {
+        "cwd": "${workspaceFolder}/pspf-explorer-2.0"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "typecheck",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "options": {
+        "cwd": "${workspaceFolder}/pspf-explorer-2.0"
+      },
+      "problemMatcher": [
+        "$tsc"
+      ]
+    },
+    {
+      "label": "test:unit",
+      "type": "shell",
+      "command": "npm run test:run",
+      "options": {
+        "cwd": "${workspaceFolder}/pspf-explorer-2.0"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "test:e2e:smoke:prod",
+      "type": "shell",
+      "command": "npm run test:e2e:prod -- --project=chromium tests/e2e/smoke.spec.ts tests/e2e/navigation.spec.ts",
+      "options": {
+        "cwd": "${workspaceFolder}/pspf-explorer-2.0"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "verify:local",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "lint",
+        "typecheck",
+        "test:unit"
+      ]
+    }
+  ]
+}
