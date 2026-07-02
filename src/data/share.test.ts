@@ -52,5 +52,19 @@ describe('share package', () => {
     expect(() => {
       validateSharePackage({ pspfShare: 'pspf-share-v1', schemaVersion: 99, stores: {} });
     }).toThrow(/schemaVersion/);
+    expect(() => {
+      validateSharePackage({
+        pspfShare: 'pspf-share-v1',
+        schemaVersion: 3,
+        stores: { unknown: [] },
+      });
+    }).toThrow(/Unknown store/i);
+    expect(() => {
+      validateSharePackage({
+        pspfShare: 'pspf-share-v1',
+        schemaVersion: 3,
+        stores: { tags: [{ id: '' }] },
+      });
+    }).toThrow(/tags\[0\]\.id/i);
   });
 });

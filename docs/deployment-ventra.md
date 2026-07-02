@@ -17,6 +17,7 @@ Add these repository secrets before first deployment:
 - `VENTRA_USER`: SSH user
 - `VENTRA_PATH`: Destination directory for website files
 - `VENTRA_SSH_KEY`: Private key for the deployment user
+- `VENTRA_HOST_KEY`: Pinned SSH host key line for Ventra (for example `host ssh-ed25519 AAAA...`)
 
 ## Host Preparation
 

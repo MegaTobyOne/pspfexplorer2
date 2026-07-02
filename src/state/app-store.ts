@@ -74,6 +74,7 @@ import {
   type WorkTrackingEntry,
   type WorkTrackingId,
 } from '../data/types.ts';
+import { requirementById } from '../pspf/index.ts';
 
 type DirectionInput = Omit<
   Direction,
@@ -92,6 +93,13 @@ function normaliseDirection(direction: Direction): Direction {
     responseState: direction.responseState ?? ('not-set' satisfies DirectionResponseState),
     evidence: direction.evidence ?? [],
   };
+}
+
+function normaliseRelationshipEndpoints(
+  endpoints: readonly [string, string],
+): readonly [string, string] {
+  const [a, b] = endpoints;
+  return a <= b ? [a, b] : [b, a];
 }
 
 export class AppStore {
@@ -478,12 +486,90 @@ export class AppStore {
 
   // ---------- Relationships ----------
 
+  #relationshipEndpointExists(kind: Relationship['kind'], endpoint: string): boolean {
+    switch (kind) {
+      case 'requirement-risk':
+      case 'requirement-action':
+      case 'requirement-direction':
+        return (
+          requirementById.has(endpoint as RequirementId) ||
+          this.risks.value.some((risk) => risk.id === endpoint) ||
+          this.actions.value.some((action) => action.id === endpoint) ||
+          this.directions.value.some((direction) => direction.id === endpoint)
+        );
+      case 'risk-action':
+        return (
+          this.risks.value.some((risk) => risk.id === endpoint) ||
+          this.actions.value.some((action) => action.id === endpoint)
+        );
+    }
+  }
+
+  #isKindCompatible(kind: Relationship['kind'], a: string, b: string): boolean {
+    const isRequirement =
+      requirementById.has(a as RequirementId) || requirementById.has(b as RequirementId);
+    const isRiskPair =
+      this.risks.value.some((risk) => risk.id === a) ||
+      this.risks.value.some((risk) => risk.id === b);
+    const isActionPair =
+      this.actions.value.some((action) => action.id === a) ||
+      this.actions.value.some((action) => action.id === b);
+    const isDirectionPair =
+      this.directions.value.some((direction) => direction.id === a) ||
+      this.directions.value.some((direction) => direction.id === b);
+
+    switch (kind) {
+      case 'requirement-risk':
+        return isRequirement && isRiskPair;
+      case 'requirement-action':
+        return isRequirement && isActionPair;
+      case 'risk-action':
+        return isRiskPair && isActionPair;
+      case 'requirement-direction':
+        return isRequirement && isDirectionPair;
+    }
+  }
+
+  #validateRelationshipInput(
+    kind: Relationship['kind'],
+    endpoints: readonly [string, string],
+  ): void {
+    const [aRaw, bRaw] = endpoints;
+    const a = aRaw.trim();
+    const b = bRaw.trim();
+    if (!a || !b) {
+      throw new Error('Relationship endpoints must be non-empty.');
+    }
+    if (a === b) {
+      throw new Error('Relationship endpoints cannot be identical.');
+    }
+    if (!this.#relationshipEndpointExists(kind, a) || !this.#relationshipEndpointExists(kind, b)) {
+      throw new Error('Relationship endpoint does not exist.');
+    }
+    if (!this.#isKindCompatible(kind, a, b)) {
+      throw new Error(`Relationship endpoints are not valid for kind "${kind}".`);
+    }
+    const normalised = normaliseRelationshipEndpoints([a, b]);
+    const duplicate = this.relationships.value.some(
+      (relationship) =>
+        relationship.kind === kind &&
+        relationship.endpoints[0] === normalised[0] &&
+        relationship.endpoints[1] === normalised[1],
+    );
+    if (duplicate) {
+      throw new Error('Relationship already exists.');
+    }
+  }
+
   async createRelationship(
     input: Omit<Relationship, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<Relationship> {
     const now = new Date().toISOString();
-    const [a, b] = input.endpoints;
-    const endpoints: readonly [string, string] = a <= b ? [a, b] : [b, a];
+    this.#validateRelationshipInput(input.kind, input.endpoints);
+    const endpoints = normaliseRelationshipEndpoints([
+      input.endpoints[0].trim(),
+      input.endpoints[1].trim(),
+    ]);
     const relationship: Relationship = {
       ...input,
       endpoints,

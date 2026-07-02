@@ -74,4 +74,24 @@ describe('validateEnvelope', () => {
       BackupValidationError,
     );
   });
+
+  it('rejects unknown stores and malformed records', () => {
+    expect(() =>
+      validateEnvelope({
+        pspfBackup: 'v1',
+        schemaVersion: 3,
+        stores: { unknownStore: [] },
+      }),
+    ).toThrow(/Unknown store/i);
+
+    expect(() =>
+      validateEnvelope({
+        pspfBackup: 'v1',
+        schemaVersion: 3,
+        stores: {
+          risks: [{ id: '' }],
+        },
+      }),
+    ).toThrow(/risks\[0\]\.id/i);
+  });
 });

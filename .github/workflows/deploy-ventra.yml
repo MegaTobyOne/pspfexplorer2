@@ -43,12 +43,16 @@ jobs:
           mkdir -p ~/.ssh
           printf '%s\n' "$VENTRA_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-      - name: Add host key
+      - name: Configure pinned host key
         env:
-          VENTRA_HOST: ${{ secrets.VENTRA_HOST }}
-          VENTRA_PORT: ${{ secrets.VENTRA_PORT }}
+          VENTRA_HOST_KEY: ${{ secrets.VENTRA_HOST_KEY }}
         run: |
-          ssh-keyscan -p "${VENTRA_PORT:-22}" "$VENTRA_HOST" >> ~/.ssh/known_hosts
+          if [ -z "$VENTRA_HOST_KEY" ]; then
+            echo "VENTRA_HOST_KEY secret is required."
+            exit 1
+          fi
+          printf '%s\n' "$VENTRA_HOST_KEY" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
       - name: Deploy dist to Ventra
         env:
           VENTRA_HOST: ${{ secrets.VENTRA_HOST }}
@@ -56,4 +60,4 @@ jobs:
           VENTRA_USER: ${{ secrets.VENTRA_USER }}
           VENTRA_PATH: ${{ secrets.VENTRA_PATH }}
         run: |
-          rsync -az --delete -e "ssh -p ${VENTRA_PORT:-22}" dist/ "$VENTRA_USER@$VENTRA_HOST:$VENTRA_PATH/"
+          rsync -az --delete -e "ssh -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts -p ${VENTRA_PORT:-22}" dist/ "$VENTRA_USER@$VENTRA_HOST:$VENTRA_PATH/"

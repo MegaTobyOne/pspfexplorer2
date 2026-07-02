@@ -10,7 +10,7 @@
  *   }
  */
 
-import { DB_VERSION, type PspfDb, type PspfStoreNames } from './db.ts';
+import { DB_VERSION, POSTURE_KEY, type PspfDb, type PspfStoreNames } from './db.ts';
 
 const BACKUP_FORMAT = 'v1' as const;
 
@@ -57,6 +57,58 @@ interface RawEnvelope {
   stores?: unknown;
 }
 
+const STORE_KEY_FIELDS: Record<(typeof STORE_NAMES)[number], 'id' | 'key' | 'requirementId'> = {
+  compliance: 'requirementId',
+  complianceEvents: 'id',
+  risks: 'id',
+  actions: 'id',
+  tags: 'id',
+  savedViews: 'id',
+  workTracking: 'id',
+  posture: 'id',
+  directions: 'id',
+  relationships: 'id',
+  meta: 'key',
+};
+
+function validateStoreItems(store: (typeof STORE_NAMES)[number], value: unknown): void {
+  if (!Array.isArray(value)) {
+    throw new BackupValidationError(`stores.${store} must be an array.`);
+  }
+  const keyField = STORE_KEY_FIELDS[store];
+  const items = value as unknown[];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item || typeof item !== 'object') {
+      throw new BackupValidationError(`stores.${store}[${i}] must be an object.`);
+    }
+    const keyValue = (item as Record<string, unknown>)[keyField];
+    if (typeof keyValue !== 'string' || keyValue.trim().length === 0) {
+      throw new BackupValidationError(
+        `stores.${store}[${i}].${keyField} must be a non-empty string.`,
+      );
+    }
+    if (store === 'posture' && keyValue !== POSTURE_KEY) {
+      throw new BackupValidationError(`stores.posture[${i}].id must equal ${POSTURE_KEY}.`);
+    }
+    if (store === 'relationships') {
+      const endpoints = (item as { endpoints?: unknown }).endpoints;
+      if (
+        !Array.isArray(endpoints) ||
+        endpoints.length !== 2 ||
+        typeof endpoints[0] !== 'string' ||
+        typeof endpoints[1] !== 'string' ||
+        endpoints[0].trim().length === 0 ||
+        endpoints[1].trim().length === 0
+      ) {
+        throw new BackupValidationError(
+          `stores.relationships[${i}].endpoints must be a pair of non-empty strings.`,
+        );
+      }
+    }
+  }
+}
+
 export function validateEnvelope(value: unknown): asserts value is BackupEnvelope {
   if (!value || typeof value !== 'object') {
     throw new BackupValidationError('Backup must be a JSON object.');
@@ -77,6 +129,16 @@ export function validateEnvelope(value: unknown): asserts value is BackupEnvelop
   }
   if (!v.stores || typeof v.stores !== 'object') {
     throw new BackupValidationError('Missing stores section.');
+  }
+  for (const key of Object.keys(v.stores)) {
+    if (!(STORE_NAMES as readonly string[]).includes(key)) {
+      throw new BackupValidationError(`Unknown store in backup envelope: ${key}.`);
+    }
+  }
+  for (const store of STORE_NAMES) {
+    const maybeStore = (v.stores as Record<string, unknown>)[store];
+    if (maybeStore === undefined) continue;
+    validateStoreItems(store, maybeStore);
   }
 }
 

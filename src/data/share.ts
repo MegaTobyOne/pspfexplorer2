@@ -70,6 +70,23 @@ interface RawShare {
   stores?: unknown;
 }
 
+function validateShareRecordArray(store: ShareableStore, value: unknown): void {
+  if (!Array.isArray(value)) {
+    throw new SharePackageValidationError(`stores.${store} must be an array.`);
+  }
+  const items = value as unknown[];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (!item || typeof item !== 'object') {
+      throw new SharePackageValidationError(`stores.${store}[${i}] must be an object.`);
+    }
+    const rec = item as { id?: unknown };
+    if (typeof rec.id !== 'string' || rec.id.trim().length === 0) {
+      throw new SharePackageValidationError(`stores.${store}[${i}].id must be a non-empty string.`);
+    }
+  }
+}
+
 export function validateSharePackage(value: unknown): asserts value is SharePackage {
   if (!value || typeof value !== 'object') {
     throw new SharePackageValidationError('Share package must be a JSON object.');
@@ -91,10 +108,20 @@ export function validateSharePackage(value: unknown): asserts value is SharePack
   if (!v.stores || typeof v.stores !== 'object') {
     throw new SharePackageValidationError('Missing stores section.');
   }
+  for (const key of Object.keys(v.stores)) {
+    if (!(SHAREABLE_STORES as readonly string[]).includes(key)) {
+      throw new SharePackageValidationError(`Unknown store in share package: ${key}.`);
+    }
+  }
+  for (const store of SHAREABLE_STORES) {
+    const maybeStore = (v.stores as Record<string, unknown>)[store];
+    if (maybeStore === undefined) continue;
+    validateShareRecordArray(store, maybeStore);
+  }
 }
 
 interface KeyedRecord {
-  id?: string;
+  id: string;
 }
 
 export async function mergeSharePackage(db: PspfDb, pkg: unknown): Promise<MergeReport> {
@@ -108,10 +135,6 @@ export async function mergeSharePackage(db: PspfDb, pkg: unknown): Promise<Merge
     const store = tx.objectStore(name);
     for (const raw of items) {
       const rec = raw as KeyedRecord;
-      if (typeof rec.id !== 'string') {
-        skipped[name] += 1;
-        continue;
-      }
       const existing = await store.get(rec.id);
       if (existing !== undefined) {
         skipped[name] += 1;

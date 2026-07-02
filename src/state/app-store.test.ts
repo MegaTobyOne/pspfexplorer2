@@ -176,4 +176,53 @@ describe('AppStore', () => {
       /not found/,
     );
   });
+
+  it('createRelationship rejects duplicate links and self-loops', async () => {
+    const reqId = asRequirementId('GOV-001');
+    const risk = await store.createRisk({
+      title: 'Identity spoofing',
+      likelihood: 3,
+      impact: 3,
+      status: 'open',
+      requirementIds: [],
+      actionIds: [],
+    });
+
+    await store.createRelationship({
+      kind: 'requirement-risk',
+      endpoints: [reqId, risk.id],
+    });
+
+    await expect(
+      store.createRelationship({
+        kind: 'requirement-risk',
+        endpoints: [reqId, risk.id],
+      }),
+    ).rejects.toThrow(/already exists/i);
+
+    await expect(
+      store.createRelationship({
+        kind: 'requirement-risk',
+        endpoints: [reqId, reqId],
+      }),
+    ).rejects.toThrow(/cannot be identical/i);
+  });
+
+  it('createRelationship rejects kind-incompatible endpoints', async () => {
+    const reqId = asRequirementId('GOV-001');
+    const action = await store.createAction({
+      title: 'Audit control operation',
+      type: 'review',
+      status: 'todo',
+      requirementIds: [],
+      riskIds: [],
+    });
+
+    await expect(
+      store.createRelationship({
+        kind: 'requirement-risk',
+        endpoints: [reqId, action.id],
+      }),
+    ).rejects.toThrow(/not valid for kind/i);
+  });
 });
