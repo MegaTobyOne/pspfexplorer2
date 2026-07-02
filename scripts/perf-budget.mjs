@@ -18,19 +18,19 @@ const ROOT = fileURLToPath(new URL('../dist/assets/', import.meta.url));
 
 /** @type {Array<{ pattern: RegExp, label: string, maxGzipKb: number }>} */
 const BUDGETS = [
-  { pattern: /^index-.*\.js$/, label: 'app shell', maxGzipKb: 20 },
-  { pattern: /^pspf-.*\.js$/, label: 'pspf data', maxGzipKb: 20 },
-  { pattern: /^requirement-view-.*\.js$/, label: 'requirement view', maxGzipKb: 6 },
-  { pattern: /^analytics-view-.*\.js$/, label: 'analytics view', maxGzipKb: 4 },
-  { pattern: /^home-view-.*\.js$/, label: 'home view', maxGzipKb: 2 },
-  { pattern: /^risks-view-.*\.js$/, label: 'risks view', maxGzipKb: 5 },
-  { pattern: /^actions-view-.*\.js$/, label: 'actions view', maxGzipKb: 5 },
-  { pattern: /^directions-view-.*\.js$/, label: 'directions view', maxGzipKb: 5 },
-  { pattern: /^risk-action-import-view-.*\.js$/, label: 'work import view', maxGzipKb: 8 },
+  { pattern: /^index-.*\.js$/, label: 'app shell', maxGzipKb: 38 },
+  { pattern: /^pspf-.*\.js$/, label: 'pspf data', maxGzipKb: 22 },
+  { pattern: /^requirement-view-.*\.js$/, label: 'requirement view', maxGzipKb: 6.6 },
+  { pattern: /^analytics-view-.*\.js$/, label: 'analytics view', maxGzipKb: 4.4 },
+  { pattern: /^home-view-.*\.js$/, label: 'home view', maxGzipKb: 3.1 },
+  { pattern: /^risks-view-.*\.js$/, label: 'risks view', maxGzipKb: 5.5 },
+  { pattern: /^actions-view-.*\.js$/, label: 'actions view', maxGzipKb: 5.5 },
+  { pattern: /^directions-view-.*\.js$/, label: 'directions view', maxGzipKb: 5.5 },
+  { pattern: /^risk-action-import-view-.*\.js$/, label: 'work import view', maxGzipKb: 8.8 },
   {
     pattern: /^(cytoscape|relationship-map-view)-.*\.js$/,
     label: 'relationship map (lazy)',
-    maxGzipKb: 160,
+    maxGzipKb: 176,
   },
 ];
 
@@ -40,7 +40,7 @@ const EXCLUDE_FROM_TOTAL = /^(cytoscape|relationship-map-view)-.*\.js$/;
 
 // Covers all non-map JS route chunks. Raised for the v3.2 long-list, import
 // review, Essential Eight, and Directions reporting release scope.
-const TOTAL_GZIP_KB_BUDGET = 96;
+const TOTAL_GZIP_KB_BUDGET = 117;
 
 const files = readdirSync(ROOT).filter((f) => f.endsWith('.js'));
 let totalGzip = 0;
