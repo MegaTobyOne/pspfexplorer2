@@ -1,0 +1,51 @@
+{
+  "schema": "pspf-explorer.framework-refresh.v1",
+  "generatedAt": "2026-07-02T05:52:34.403Z",
+  "note": "One-off framework source refresh evidence for PSPF + ISM.",
+  "artefacts": [
+    {
+      "id": "pspf-2026-list-requirements",
+      "url": "https://www.protectivesecurity.gov.au/system/files/2026-07/pspf-release-2026-list-requirements_0.pdf",
+      "fileName": "pspf-release-2026-list-requirements_0.pdf",
+      "status": 200,
+      "contentType": "application/pdf",
+      "sizeBytes": 262580,
+      "sha256": "be1eb1cece9d8096b07740c8a9ef8cd750b29c43ae9954f07cedf09a14542945",
+      "checks": ["PSPF Release 2026", "List of Requirements", "Req Number"],
+      "validatedAt": "2026-07-02T05:52:33.514Z"
+    },
+    {
+      "id": "pspf-2026-summary-changes",
+      "url": "https://www.protectivesecurity.gov.au/system/files/2026-07/pspf-release-2026-summary-changes_0.pdf",
+      "fileName": "pspf-release-2026-summary-changes_0.pdf",
+      "status": 200,
+      "contentType": "application/pdf",
+      "sizeBytes": 219184,
+      "sha256": "0258abc0599889615856427d0cbd73b0a4b83f3619727f29bc293f16373eefd3",
+      "checks": ["PSPF Release 2026", "Summary of Changes"],
+      "validatedAt": "2026-07-02T05:52:33.701Z"
+    },
+    {
+      "id": "ism-2026-manual",
+      "url": "https://www.cyber.gov.au/sites/default/files/2026-06/Information%20security%20manual%20%28June%202026%29.pdf",
+      "fileName": "information-security-manual-june-2026.pdf",
+      "status": 200,
+      "contentType": "application/pdf",
+      "sizeBytes": 2368636,
+      "sha256": "be2f7c32855ccad55f09c3397e1ea8f79b30907b5a155568c2d8943ef668693f",
+      "checks": ["Information security manual", "June 2026"],
+      "validatedAt": "2026-07-02T05:52:34.325Z"
+    },
+    {
+      "id": "ism-2026-changes",
+      "url": "https://www.cyber.gov.au/sites/default/files/2026-06/ISM%20June%202026%20changes%20%28June%202026%29.pdf",
+      "fileName": "ism-june-2026-changes.pdf",
+      "status": 200,
+      "contentType": "application/pdf",
+      "sizeBytes": 727999,
+      "sha256": "4780b0c27a1faf766f3e117a11bfc2800deb409228ea7f2903cb60f5379ee4b9",
+      "checks": ["ISM", "June 2026"],
+      "validatedAt": "2026-07-02T05:52:34.402Z"
+    }
+  ]
+}

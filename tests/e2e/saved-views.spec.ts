@@ -32,11 +32,14 @@ test('user can build a filter and save/load/delete a view', async ({ page }) => 
   // Reset filters then load the saved view
   await view.getByRole('button', { name: 'Reset' }).click();
   await expect(view.getByLabel('Domain')).toHaveValue('');
+  await savedItem.getByRole('button', { name: 'Open' }).click();
   await savedItem.getByRole('button', { name: 'Load' }).click();
   await expect(view.getByLabel('Domain')).toHaveValue('risk');
 
   // Delete (confirm)
   page.once('dialog', (d) => void d.accept());
+  await savedItem.getByRole('button', { name: 'Close' }).click();
+  await savedItem.getByRole('button', { name: 'Open' }).click();
   await savedItem.getByRole('button', { name: 'Delete' }).click();
   await expect(view.locator('p.empty', { hasText: 'No saved views yet' })).toBeVisible();
 });

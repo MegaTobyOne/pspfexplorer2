@@ -7,6 +7,7 @@ import { appStoreContext } from '../state/contexts.ts';
 import type { AppStore } from '../state/app-store.ts';
 import { SignalWatcher } from '../state/signal-watcher.ts';
 import { allRequirements } from '../pspf/index.ts';
+import '../components/list-workbench.ts';
 
 const KINDS: readonly {
   value: RelationshipKind;
@@ -48,23 +49,41 @@ export class RelationshipsView extends LitElement {
       :host {
         display: block;
       }
+      article {
+        display: grid;
+        gap: var(--space-3);
+      }
       h2 {
         margin: 0 0 var(--space-3) 0;
         font-size: var(--text-xl);
       }
+      .layout {
+        display: block;
+      }
+      h3 {
+        margin: 0;
+        font-size: var(--text-md);
+      }
+      .panel-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+      }
       form.create {
         display: grid;
-        grid-template-columns: 14rem 1fr 1fr auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
+        align-items: stretch;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
         margin-bottom: var(--space-3);
+        min-width: 0;
       }
       @media (max-width: 800px) {
         form.create {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
         }
       }
       label.field {
@@ -103,26 +122,58 @@ export class RelationshipsView extends LitElement {
         opacity: 0.5;
         cursor: not-allowed;
       }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: var(--text-sm);
+      ul.relationships {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: var(--space-2);
       }
-      th,
-      td {
-        text-align: left;
-        padding: var(--space-2);
-        border-bottom: 1px solid var(--colour-border);
+      li.relationship {
+        border: 1px solid var(--colour-border);
+        border-radius: var(--radius-md);
+        background: var(--colour-bg-elevated);
+        padding: var(--space-3);
       }
-      th {
-        color: var(--colour-fg-muted);
+      .item-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-2);
+      }
+      .item-head-main {
+        display: grid;
+        gap: 2px;
+      }
+      .kind-label {
         font-size: var(--text-xs);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+        color: var(--colour-fg-muted);
       }
       .endpoint {
         font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
         font-size: var(--text-sm);
+      }
+      .endpoint-list {
+        display: grid;
+        gap: var(--space-1);
+        margin-top: var(--space-2);
+      }
+      .endpoint-row {
+        display: flex;
+        gap: var(--space-2);
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .endpoint-row strong {
+        font-size: var(--text-xs);
+        color: var(--colour-fg-muted);
+        min-width: 6rem;
+      }
+      .item-toggle {
+        white-space: nowrap;
+      }
+      .actions {
+        margin-top: var(--space-2);
       }
       .empty {
         color: var(--colour-fg-muted);
@@ -155,6 +206,7 @@ export class RelationshipsView extends LitElement {
   @state() private accessor left = '';
   @state() private accessor right = '';
   @state() private accessor filterKind: RelationshipKind | 'all' = 'all';
+  @state() private accessor expandedRelationshipIds: ReadonlySet<string> = new Set();
 
   #requirementOptions = allRequirements.map((req) => ({
     id: req.id,
@@ -175,124 +227,158 @@ export class RelationshipsView extends LitElement {
           Cross-link requirements, risks, actions and directions. Relationships are symmetric;
           ordering of endpoints is normalised on save.
         </p>
-
-        <form
-          class="create"
-          @submit=${(e: Event): void => {
-            e.preventDefault();
-            void this.#create();
-          }}
-          aria-label="Add relationship"
-        >
-          <label class="field">
-            Kind
-            <select
-              @change=${(e: Event): void => {
-                this.kind = (e.target as HTMLSelectElement).value as RelationshipKind;
-                this.left = '';
-                this.right = '';
+        <pspf-list-workbench left-label="Relationship controls" right-label="Relationship table">
+          <div slot="left">
+            <h3>Build links</h3>
+            <p class="panel-note">
+              Choose the relationship type, then connect the two endpoints. The left panel updates
+              automatically as the kind changes.
+            </p>
+            <form
+              class="create"
+              @submit=${(e: Event): void => {
+                e.preventDefault();
+                void this.#create();
               }}
+              aria-label="Add relationship"
             >
-              ${KINDS.map(
-                (k) =>
-                  html`<option value=${k.value} ?selected=${k.value === this.kind}>
-                    ${k.label}
-                  </option>`,
-              )}
-            </select>
-          </label>
-          <label class="field">
-            ${meta.left}
-            <select
-              aria-label=${meta.left}
-              required
-              @change=${(e: Event): void => {
-                this.left = (e.target as HTMLSelectElement).value;
-              }}
-            >
-              <option value="" ?selected=${this.left === ''}>— select —</option>
-              ${leftOptions.map(
-                (opt) =>
-                  html`<option value=${opt.id} ?selected=${opt.id === this.left}>
-                    ${opt.label}
-                  </option>`,
-              )}
-            </select>
-          </label>
-          <label class="field">
-            ${meta.right}
-            <select
-              aria-label=${meta.right}
-              required
-              @change=${(e: Event): void => {
-                this.right = (e.target as HTMLSelectElement).value;
-              }}
-            >
-              <option value="" ?selected=${this.right === ''}>— select —</option>
-              ${rightOptions.map(
-                (opt) =>
-                  html`<option value=${opt.id} ?selected=${opt.id === this.right}>
-                    ${opt.label}
-                  </option>`,
-              )}
-            </select>
-          </label>
-          <button class="primary" type="submit" ?disabled=${!this.#canCreate()}>Add link</button>
-        </form>
+              <label class="field">
+                Kind
+                <select
+                  @change=${(e: Event): void => {
+                    this.kind = (e.target as HTMLSelectElement).value as RelationshipKind;
+                    this.left = '';
+                    this.right = '';
+                  }}
+                >
+                  ${KINDS.map(
+                    (k) =>
+                      html`<option value=${k.value} ?selected=${k.value === this.kind}>
+                        ${k.label}
+                      </option>`,
+                  )}
+                </select>
+              </label>
+              <label class="field">
+                ${meta.left}
+                <select
+                  aria-label=${meta.left}
+                  required
+                  @change=${(e: Event): void => {
+                    this.left = (e.target as HTMLSelectElement).value;
+                  }}
+                >
+                  <option value="" ?selected=${this.left === ''}>— select —</option>
+                  ${leftOptions.map(
+                    (opt) =>
+                      html`<option value=${opt.id} ?selected=${opt.id === this.left}>
+                        ${opt.label}
+                      </option>`,
+                  )}
+                </select>
+              </label>
+              <label class="field">
+                ${meta.right}
+                <select
+                  aria-label=${meta.right}
+                  required
+                  @change=${(e: Event): void => {
+                    this.right = (e.target as HTMLSelectElement).value;
+                  }}
+                >
+                  <option value="" ?selected=${this.right === ''}>— select —</option>
+                  ${rightOptions.map(
+                    (opt) =>
+                      html`<option value=${opt.id} ?selected=${opt.id === this.right}>
+                        ${opt.label}
+                      </option>`,
+                  )}
+                </select>
+              </label>
+              <button class="primary" type="submit" ?disabled=${!this.#canCreate()}>
+                Add link
+              </button>
+            </form>
 
-        <fieldset class="filter">
-          <legend>Filter</legend>
-          <select
-            aria-label="Filter by kind"
-            @change=${(e: Event): void => {
-              this.filterKind = (e.target as HTMLSelectElement).value as RelationshipKind | 'all';
-            }}
-          >
-            <option value="all" ?selected=${this.filterKind === 'all'}>All kinds</option>
-            ${KINDS.map(
-              (k) =>
-                html`<option value=${k.value} ?selected=${k.value === this.filterKind}>
-                  ${k.label}
-                </option>`,
-            )}
-          </select>
-        </fieldset>
+            <fieldset class="filter">
+              <legend>Filter</legend>
+              <select
+                aria-label="Filter by kind"
+                @change=${(e: Event): void => {
+                  this.filterKind = (e.target as HTMLSelectElement).value as
+                    | RelationshipKind
+                    | 'all';
+                }}
+              >
+                <option value="all" ?selected=${this.filterKind === 'all'}>All kinds</option>
+                ${KINDS.map(
+                  (k) =>
+                    html`<option value=${k.value} ?selected=${k.value === this.filterKind}>
+                      ${k.label}
+                    </option>`,
+                )}
+              </select>
+            </fieldset>
+          </div>
 
-        ${visible.length === 0
-          ? html`<p class="empty" data-testid="empty">No relationships recorded.</p>`
-          : html`
-              <table aria-label="Relationships">
-                <thead>
-                  <tr>
-                    <th>Kind</th>
-                    <th>Endpoint A</th>
-                    <th>Endpoint B</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${visible.map((r) => this.#renderRow(r))}
-                </tbody>
-              </table>
-            `}
+          <div slot="right">
+            ${visible.length === 0
+              ? html`<p class="empty" data-testid="empty">No relationships recorded.</p>`
+              : html`<ul class="relationships">
+                  ${visible.map((r) => this.#renderItem(r))}
+                </ul>`}
+          </div>
+        </pspf-list-workbench>
       </article>
     `;
   }
 
-  #renderRow(r: Relationship): TemplateResult {
+  #renderItem(r: Relationship): TemplateResult {
+    const expanded = this.expandedRelationshipIds.has(r.id);
     const label = KINDS.find((k) => k.value === r.kind)?.label ?? r.kind;
     return html`
-      <tr data-id=${r.id}>
-        <td>${label}</td>
-        <td class="endpoint">${this.#lookupLabel(r.endpoints[0])}</td>
-        <td class="endpoint">${this.#lookupLabel(r.endpoints[1])}</td>
-        <td>
-          <button @click=${(): void => void this.#remove(r)} aria-label="Delete relationship">
-            Delete
+      <li class="relationship" data-id=${r.id}>
+        <div class="item-head">
+          <div class="item-head-main">
+            <strong>${this.#lookupLabel(r.endpoints[0])}</strong>
+            <span class="kind-label">${label}</span>
+          </div>
+          <button
+            class="item-toggle"
+            type="button"
+            @click=${(): void => this.#toggleExpanded(r.id)}
+          >
+            ${expanded ? 'Close' : 'Open'}
           </button>
-        </td>
-      </tr>
+        </div>
+        ${expanded
+          ? html`
+              <div class="endpoint-list">
+                <div class="endpoint-row">
+                  <strong>Endpoint A</strong>
+                  <span class="endpoint">${this.#lookupLabel(r.endpoints[0])}</span>
+                </div>
+                <div class="endpoint-row">
+                  <strong>Endpoint B</strong>
+                  <span class="endpoint">${this.#lookupLabel(r.endpoints[1])}</span>
+                </div>
+              </div>
+              <div class="actions">
+                <button @click=${(): void => void this.#remove(r)} aria-label="Delete relationship">
+                  Delete
+                </button>
+              </div>
+            `
+          : ''}
+      </li>
     `;
+  }
+
+  #toggleExpanded(id: string): void {
+    const next = new Set(this.expandedRelationshipIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.expandedRelationshipIds = next;
   }
 
   #canCreate(): boolean {

@@ -199,7 +199,7 @@ export class RequirementView extends LitElement {
         <pspf-breadcrumbs
           .items=${[
             { label: 'Home', href: '#/' },
-            { label: domain?.name ?? req.domain, href: `#/domain/${req.domain}` },
+            { label: domain?.name ?? req.domain, href: `#/requirements/${req.domain}` },
             { label: req.id },
           ]}
         ></pspf-breadcrumbs>
@@ -236,7 +236,7 @@ export class RequirementView extends LitElement {
                 <dt>References</dt>
                 <dd>
                   <ul class="refs">
-                    ${req.references.map((r) => html`<li>${r}</li>`)}
+                    ${req.references.map((r) => this.#renderReference(r))}
                   </ul>
                 </dd>
               `
@@ -352,6 +352,23 @@ export class RequirementView extends LitElement {
       return '#/directions';
     }
     return undefined;
+  }
+
+  #renderReference(reference: string) {
+    const urlMatch = /https?:\/\/[\w./%#?=&:-]+/.exec(reference);
+    if (!urlMatch) return html`<li>${reference}</li>`;
+
+    const url = urlMatch[0];
+    const label = reference
+      .replace(url, '')
+      .replace(/[:\-\s]+$/g, '')
+      .trim();
+    return html`
+      <li>
+        ${label ? html`<span>${label}: </span>` : ''}
+        <a href=${url} target="_blank" rel="noopener noreferrer">${url}</a>
+      </li>
+    `;
   }
 
   async #createRelationship(requirementId: string): Promise<void> {

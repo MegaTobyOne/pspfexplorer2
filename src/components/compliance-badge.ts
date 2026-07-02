@@ -13,20 +13,36 @@ export class ComplianceBadge extends LitElement {
         display: inline-flex;
         align-items: center;
         gap: var(--space-1);
-        padding: 2px var(--space-2);
-        border-radius: var(--radius-sm);
+        padding: 0.3rem var(--space-2);
+        border-radius: 999px;
         font-size: var(--text-xs);
         font-weight: 600;
-        background: var(--colour-bg-elevated);
-        border: 1px solid var(--colour-border);
+        background: color-mix(in srgb, var(--colour-bg-elevated) 82%, var(--colour-fg) 18%);
+        border: 1px solid
+          color-mix(in srgb, var(--colour-border) 72%, var(--swatch, var(--colour-fg-muted)) 28%);
         color: var(--colour-fg);
         line-height: 1.2;
+        box-shadow: var(--shadow-1);
+        transition:
+          transform var(--motion-fast) ease,
+          border-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease,
+          background-color var(--motion-fast) ease;
+      }
+      :host(:hover),
+      :host(:focus-within) {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-2);
       }
       .swatch {
-        width: 8px;
-        height: 8px;
+        width: 0.7rem;
+        height: 0.7rem;
         border-radius: 50%;
         background: var(--swatch, var(--colour-fg-muted));
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+      }
+      span:last-child {
+        white-space: nowrap;
       }
     `,
   ];

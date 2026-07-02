@@ -18,6 +18,7 @@ import { SignalWatcher } from '../state/signal-watcher.ts';
 import { applyFilters, filtersAreEmpty, summariseFilters } from '../domain/filtering.ts';
 import { complianceLabel } from '../domain/compliance-display.ts';
 import '../components/compliance-badge.ts';
+import '../components/list-workbench.ts';
 
 @customElement('pspf-saved-views-view')
 export class SavedViewsView extends LitElement {
@@ -31,26 +32,15 @@ export class SavedViewsView extends LitElement {
         margin: 0 0 var(--space-3) 0;
         font-size: var(--text-xl);
       }
-      .layout {
-        display: grid;
-        grid-template-columns: minmax(16rem, 22rem) 1fr;
-        gap: var(--space-4);
-        align-items: start;
-      }
-      @media (max-width: 800px) {
-        .layout {
-          grid-template-columns: 1fr;
-        }
-      }
-      section.panel {
-        padding: var(--space-3);
-        border: 1px solid var(--colour-border);
-        border-radius: var(--radius-md);
-        background: var(--colour-bg-elevated);
-      }
       h3 {
-        margin: 0 0 var(--space-2) 0;
+        margin: 0;
         font-size: var(--text-md);
+      }
+      .panel-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
       }
       label.field {
         display: flex;
@@ -108,16 +98,33 @@ export class SavedViewsView extends LitElement {
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: var(--space-1);
+        gap: var(--space-2);
       }
       ul.saved li {
         display: grid;
-        grid-template-columns: 1fr auto auto;
         gap: var(--space-2);
-        align-items: baseline;
         padding: var(--space-2);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-sm);
+      }
+      .saved-head {
+        display: flex;
+        gap: var(--space-2);
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .saved-head-main {
+        display: grid;
+        gap: 2px;
+      }
+      .saved-actions {
+        display: flex;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+      }
+      .item-toggle {
+        white-space: nowrap;
       }
       ul.saved .meta {
         font-size: var(--text-xs);
@@ -172,6 +179,7 @@ export class SavedViewsView extends LitElement {
   @state() private filterStates: ReadonlySet<ComplianceState> = new Set();
   @state() private filterQ = '';
   @state() private saveName = '';
+  @state() private expandedSavedViewIds: ReadonlySet<string> = new Set();
 
   private get filters(): SavedViewFilters {
     const f: SavedViewFilters = {};
@@ -193,16 +201,23 @@ export class SavedViewsView extends LitElement {
           Build a filter on the left to browse the requirement catalogue, then save it as a named
           view to come back to later.
         </p>
-        <div class="layout">
-          ${this.#filtersPanel(saved)} ${this.#resultsPanel(matches, compliance)}
-        </div>
+        <pspf-list-workbench left-label="Saved view controls" right-label="Filtered requirements">
+          <div slot="left">
+            <h3>Filter builder</h3>
+            <p class="panel-note">
+              Build or load a saved filter here. Open a saved item to load or delete it.
+            </p>
+            ${this.#filtersPanel(saved)}
+          </div>
+          <div slot="right">${this.#resultsPanel(matches, compliance)}</div>
+        </pspf-list-workbench>
       </article>
     `;
   }
 
   #filtersPanel(saved: readonly SavedView[]): TemplateResult {
     return html`
-      <section class="panel" aria-label="Filters and saved views">
+      <section aria-label="Filters and saved views">
         <h3>Filters</h3>
         <label class="field">
           Domain
@@ -296,12 +311,27 @@ export class SavedViewsView extends LitElement {
                 ${saved.map(
                   (sv) => html`
                     <li>
-                      <div>
-                        <strong>${sv.name}</strong>
-                        <div class="meta">${summariseFilters(sv.filters)}</div>
+                      <div class="saved-head">
+                        <div class="saved-head-main">
+                          <strong>${sv.name}</strong>
+                          <div class="meta">${summariseFilters(sv.filters)}</div>
+                        </div>
+                        <button
+                          class="item-toggle"
+                          type="button"
+                          @click=${(): void => this.#toggleSavedExpanded(sv.id)}
+                        >
+                          ${this.expandedSavedViewIds.has(sv.id) ? 'Close' : 'Open'}
+                        </button>
                       </div>
-                      <button @click=${(): void => this.#load(sv)}>Load</button>
-                      <button @click=${(): void => void this.#remove(sv)}>Delete</button>
+                      ${this.expandedSavedViewIds.has(sv.id)
+                        ? html`
+                            <div class="saved-actions">
+                              <button @click=${(): void => this.#load(sv)}>Load</button>
+                              <button @click=${(): void => void this.#remove(sv)}>Delete</button>
+                            </div>
+                          `
+                        : ''}
                     </li>
                   `,
                 )}
@@ -316,7 +346,7 @@ export class SavedViewsView extends LitElement {
     compliance: ReadonlyMap<RequirementId, ComplianceEntry>,
   ): TemplateResult {
     return html`
-      <section class="panel" aria-label="Filter results">
+      <section aria-label="Filter results">
         <h3>Results (${matches.length})</h3>
         <p class="summary">${summariseFilters(this.filters)}</p>
         ${matches.length === 0
@@ -367,6 +397,13 @@ export class SavedViewsView extends LitElement {
       return;
     }
     await this.store.removeSavedView(sv.id);
+  }
+
+  #toggleSavedExpanded(id: string): void {
+    const next = new Set(this.expandedSavedViewIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.expandedSavedViewIds = next;
   }
 }
 

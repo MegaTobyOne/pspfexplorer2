@@ -42,7 +42,7 @@ function requirementResults(
   return allRequirements
     .filter((r: Requirement) => {
       const entry = compliance.get(r.id);
-      const haystack = `${r.id} ${r.title} ${r.text} ${entry?.notes ?? ''} ${entry?.evidence.map((e) => e.value).join(' ') ?? ''}`;
+      const haystack = `${r.id} ${r.title} ${r.text} ${r.references?.join(' ') ?? ''} ${entry?.notes ?? ''} ${entry?.evidence.map((e) => e.value).join(' ') ?? ''}`;
       return includes(haystack, q);
     })
     .slice(0, 12)

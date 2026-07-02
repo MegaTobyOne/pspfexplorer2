@@ -23,6 +23,16 @@ export const routes: readonly RouteSpec[] = [
     load: () => import('../views/domain-view.ts'),
   },
   {
+    path: '/requirements',
+    component: 'pspf-requirements-view',
+    load: () => import('../views/requirements-view.ts'),
+  },
+  {
+    path: '/requirements/:domain',
+    component: 'pspf-requirements-view',
+    load: () => import('../views/requirements-view.ts'),
+  },
+  {
     path: '/requirement/:id',
     component: 'pspf-requirement-view',
     load: () => import('../views/requirement-view.ts'),

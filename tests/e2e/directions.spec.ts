@@ -44,6 +44,11 @@ test('user can create, edit and delete a PSPF direction with linked requirements
   await expect(item).toBeVisible();
   await expect(item.getByText('PSPF Direction 001-2025')).toBeVisible();
   await expect(item.getByText('Heightened cyber posture')).toBeVisible();
+
+  await expect(item.getByRole('button', { name: 'Open' })).toBeVisible();
+  await item.getByRole('button', { name: 'Open' }).click();
+  await expect(item.getByRole('button', { name: 'Close' })).toBeVisible();
+
   await expect(item.getByText('Risk-managed')).toBeVisible();
   await expect(item.getByText('Accepted with compensating monitoring.')).toBeVisible();
   await expect(item.getByText('note: CISO approval in April forum')).toBeVisible();
@@ -91,12 +96,8 @@ test('user can create, edit and delete a PSPF direction with linked requirements
 
   // Delete
   page.once('dialog', (d) => void d.accept());
-  await page
-    .locator('pspf-directions-view li.direction')
-    .first()
-    .getByRole('button', {
-      name: 'Delete',
-    })
-    .click();
+  const persistedItem = page.locator('pspf-directions-view li.direction').first();
+  await persistedItem.getByRole('button', { name: 'Open' }).click();
+  await persistedItem.getByRole('button', { name: 'Delete' }).click();
   await expect(page.locator('pspf-directions-view [data-testid="empty"]')).toBeVisible();
 });

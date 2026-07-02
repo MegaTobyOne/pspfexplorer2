@@ -6,18 +6,20 @@ import { RISK_STATUSES, type LikelihoodImpact, type Risk, type RiskStatus } from
 import { appStoreContext } from '../state/contexts.ts';
 import type { AppStore } from '../state/app-store.ts';
 import { SignalWatcher } from '../state/signal-watcher.ts';
+import {
+  clearLocalValue,
+  clearSessionValue,
+  readListPrefs,
+  readSelectionSet,
+  writeListPrefs,
+  writeSelectionSet,
+  type PersistedListPrefs,
+} from '../state/list-preferences.ts';
+import '../components/list-workbench.ts';
 
 const SCALE: readonly LikelihoodImpact[] = [1, 2, 3, 4, 5];
 const RISK_LIST_PREFS_KEY = 'pspf:risk-list-prefs';
 const RISK_LIST_SELECTIONS_KEY = 'pspf:risk-list-selections';
-
-interface RiskListPrefs {
-  searchQuery: string;
-  sortMode: 'updated' | 'alpha';
-  statusFilter: RiskStatus | 'all';
-  page: number;
-  pageSize: number;
-}
 
 function riskScore(r: Pick<Risk, 'likelihood' | 'impact'>): number {
   return r.likelihood * r.impact;
@@ -38,23 +40,41 @@ export class RisksView extends LitElement {
       :host {
         display: block;
       }
+      article {
+        display: grid;
+        gap: var(--space-3);
+      }
       h2 {
         margin: 0 0 var(--space-3) 0;
         font-size: var(--text-xl);
       }
+      .layout {
+        display: block;
+      }
+      h3 {
+        margin: 0;
+        font-size: var(--text-md);
+      }
+      .panel-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+      }
       form.create {
         display: grid;
-        grid-template-columns: 1fr 8rem 8rem 9rem auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
+        align-items: stretch;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
         margin-bottom: var(--space-3);
+        min-width: 0;
       }
       @media (max-width: 800px) {
         form.create {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
         }
       }
       label.field {
@@ -75,6 +95,18 @@ export class RisksView extends LitElement {
         padding: var(--space-1) var(--space-2);
         width: 100%;
         box-sizing: border-box;
+        transition:
+          border-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease,
+          background-color var(--motion-fast) ease;
+      }
+      input[type='text']:focus-visible,
+      textarea:focus-visible,
+      select:focus-visible,
+      button:focus-visible {
+        outline: none;
+        border-color: var(--colour-accent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--colour-accent) 24%, transparent);
       }
       textarea {
         min-height: 4rem;
@@ -88,6 +120,17 @@ export class RisksView extends LitElement {
         border-radius: var(--radius-sm);
         padding: var(--space-1) var(--space-2);
         color: inherit;
+        transition:
+          transform var(--motion-fast) ease,
+          border-color var(--motion-fast) ease,
+          background-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease;
+      }
+      button:hover:not(:disabled),
+      button:focus-visible:not(:disabled) {
+        border-color: var(--colour-accent);
+        box-shadow: var(--shadow-1);
+        transform: translateY(-1px);
       }
       button.primary {
         background: var(--colour-accent);
@@ -107,16 +150,39 @@ export class RisksView extends LitElement {
         gap: var(--space-2);
       }
       li.risk {
+        position: relative;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
+        border-left-width: 4px;
         border-radius: var(--radius-md);
         background: var(--colour-bg-elevated);
+        transition:
+          transform var(--motion-medium) ease,
+          border-color var(--motion-medium) ease,
+          box-shadow var(--motion-medium) ease,
+          background-color var(--motion-medium) ease;
+      }
+      li.risk:hover,
+      li.risk:focus-within {
+        transform: translateY(-1px);
+        border-color: var(--band-accent, var(--colour-border));
+        box-shadow: var(--shadow-2);
       }
       li.risk header {
         display: flex;
         gap: var(--space-2);
         align-items: baseline;
         flex-wrap: wrap;
+        justify-content: space-between;
+      }
+      .item-header-main {
+        display: flex;
+        gap: var(--space-2);
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .item-toggle {
+        white-space: nowrap;
       }
       li.risk .score {
         display: inline-flex;
@@ -130,18 +196,22 @@ export class RisksView extends LitElement {
         color: var(--band-fg, var(--colour-fg));
       }
       li.risk[data-band='low'] {
+        --band-accent: #2f6f3a;
         --band-bg: #2f6f3a;
         --band-fg: #fff;
       }
       li.risk[data-band='medium'] {
+        --band-accent: #b8860b;
         --band-bg: #b8860b;
         --band-fg: #fff;
       }
       li.risk[data-band='high'] {
+        --band-accent: #b34a00;
         --band-bg: #b34a00;
         --band-fg: #fff;
       }
       li.risk[data-band='extreme'] {
+        --band-accent: #99182c;
         --band-bg: #99182c;
         --band-fg: #fff;
       }
@@ -164,6 +234,7 @@ export class RisksView extends LitElement {
         border-radius: var(--radius-md);
         color: var(--colour-fg-muted);
         font-size: var(--text-sm);
+        background: var(--colour-bg-elevated);
       }
       .edit-grid {
         display: grid;
@@ -173,13 +244,9 @@ export class RisksView extends LitElement {
       }
       .list-tools {
         display: grid;
-        grid-template-columns: minmax(14rem, 1fr) 12rem auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
-        padding: var(--space-3);
-        border: 1px solid var(--colour-border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-3);
+        min-width: 0;
       }
       .bulk-actions {
         display: flex;
@@ -207,10 +274,6 @@ export class RisksView extends LitElement {
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        padding: var(--space-3);
-        border: 1px solid var(--colour-border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-3);
       }
       .pagination .controls {
         display: flex;
@@ -257,6 +320,7 @@ export class RisksView extends LitElement {
   @state() private statusFilter: RiskStatus | 'all' = 'all';
   @state() private page = 1;
   @state() private pageSize = 20;
+  @state() private expandedRiskIds: ReadonlySet<string> = new Set();
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -291,19 +355,33 @@ export class RisksView extends LitElement {
           Capture risks against the security programme. Score = likelihood × impact (1–25). Link
           risks to requirements and actions for relationship-map coverage.
         </p>
-        ${this.#createForm()} ${allRisks.length > 0 ? this.#listTools(allRisks, visibleRisks) : ''}
-        ${visibleRisks.length > 0 ? this.#pagination(visibleRisks.length, totalPages, page) : ''}
-        ${risks.length === 0
-          ? html`<p class="empty">
-              ${allRisks.length === 0
-                ? 'No risks recorded yet.'
-                : 'No risks match the current view.'}
-            </p>`
-          : html`
-              <ul class="risks">
-                ${risks.map((r) => this.#riskItem(r))}
-              </ul>
-            `}
+        <pspf-list-workbench left-label="Risk controls" right-label="Risk list">
+          <div slot="left">
+            <h3>Add risk</h3>
+            <p class="panel-note">
+              Capture the issue, score it, and keep the list filtered to the slice you want to work
+              on.
+            </p>
+            ${this.#createForm()}
+            ${allRisks.length > 0 ? this.#listTools(allRisks, visibleRisks) : ''}
+          </div>
+          <div slot="right">
+            ${visibleRisks.length > 0
+              ? this.#pagination(visibleRisks.length, totalPages, page)
+              : ''}
+            ${risks.length === 0
+              ? html`<p class="empty">
+                  ${allRisks.length === 0
+                    ? 'No risks recorded yet.'
+                    : 'No risks match the current view.'}
+                </p>`
+              : html`
+                  <ul class="risks">
+                    ${risks.map((r) => this.#riskItem(r))}
+                  </ul>
+                `}
+          </div>
+        </pspf-list-workbench>
       </article>
     `;
   }
@@ -518,6 +596,7 @@ export class RisksView extends LitElement {
 
   #riskItem(r: Risk): TemplateResult {
     const isEditing = this.editingId === r.id;
+    const isExpanded = isEditing || this.expandedRiskIds.has(r.id);
     const selected = this.selectedRiskIds.has(r.id);
     const score = riskScore(r);
     const band = riskBand(score);
@@ -525,21 +604,30 @@ export class RisksView extends LitElement {
     return html`
       <li class="risk" data-band=${band}>
         <header>
-          <input
-            type="checkbox"
-            aria-label=${`Select risk ${r.title}`}
-            .checked=${selected}
-            @change=${(e: Event): void =>
-              this.#toggleSelected(r.id, (e.target as HTMLInputElement).checked)}
-          />
-          <strong>${r.title}</strong>
-          <span class="score" aria-label=${ariaLabel}>
-            ${r.likelihood}×${r.impact} → ${score} ${band}
-          </span>
-          <span class="meta">${r.status}</span>
-          <span class="meta">updated ${r.updatedAt.slice(0, 10)}</span>
+          <div class="item-header-main">
+            <input
+              type="checkbox"
+              aria-label=${`Select risk ${r.title}`}
+              .checked=${selected}
+              @change=${(e: Event): void =>
+                this.#toggleSelected(r.id, (e.target as HTMLInputElement).checked)}
+            />
+            <strong>${r.title}</strong>
+            <span class="score" aria-label=${ariaLabel}>
+              ${r.likelihood}×${r.impact} → ${score} ${band}
+            </span>
+            <span class="meta">${r.status}</span>
+            <span class="meta">updated ${r.updatedAt.slice(0, 10)}</span>
+          </div>
+          <button
+            class="item-toggle"
+            type="button"
+            @click=${(): void => this.#toggleExpanded(r.id)}
+          >
+            ${isExpanded ? 'Close' : 'Open'}
+          </button>
         </header>
-        ${isEditing ? this.#editForm(r) : this.#viewBody(r)}
+        ${isExpanded ? (isEditing ? this.#editForm(r) : this.#viewBody(r)) : ''}
       </li>
     `;
   }
@@ -581,6 +669,13 @@ export class RisksView extends LitElement {
     this.selectedRiskIds = new Set();
   }
 
+  #toggleExpanded(id: string): void {
+    const next = new Set(this.expandedRiskIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.expandedRiskIds = next;
+  }
+
   #resetListState(): void {
     this.searchQuery = '';
     this.sortMode = 'updated';
@@ -588,63 +683,38 @@ export class RisksView extends LitElement {
     this.page = 1;
     this.pageSize = 20;
     this.selectedRiskIds = new Set();
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(RISK_LIST_PREFS_KEY);
-    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(RISK_LIST_SELECTIONS_KEY);
+    this.expandedRiskIds = new Set();
+    clearLocalValue(RISK_LIST_PREFS_KEY);
+    clearSessionValue(RISK_LIST_SELECTIONS_KEY);
   }
 
   #restorePrefs(): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(RISK_LIST_PREFS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<RiskListPrefs>;
-      this.searchQuery = typeof parsed.searchQuery === 'string' ? parsed.searchQuery : '';
-      this.sortMode = parsed.sortMode === 'alpha' ? 'alpha' : 'updated';
-      this.statusFilter =
-        parsed.statusFilter === 'all' ||
-        (typeof parsed.statusFilter === 'string' && RISK_STATUSES.includes(parsed.statusFilter))
-          ? parsed.statusFilter
-          : 'all';
-      this.page = typeof parsed.page === 'number' && parsed.page > 0 ? Math.floor(parsed.page) : 1;
-      this.pageSize =
-        parsed.pageSize === 20 || parsed.pageSize === 50 || parsed.pageSize === 100
-          ? parsed.pageSize
-          : 20;
-    } catch {
-      // Ignore invalid persisted preferences.
-    }
+    const prefs = readListPrefs(RISK_LIST_PREFS_KEY, RISK_STATUSES);
+    if (!prefs) return;
+    this.searchQuery = prefs.searchQuery;
+    this.sortMode = prefs.sortMode;
+    this.statusFilter = prefs.statusFilter;
+    this.page = prefs.page;
+    this.pageSize = prefs.pageSize;
   }
 
   #persistPrefs(): void {
-    if (typeof localStorage === 'undefined') return;
-    const prefs: RiskListPrefs = {
+    const prefs: PersistedListPrefs<RiskStatus> = {
       searchQuery: this.searchQuery,
       sortMode: this.sortMode,
       statusFilter: this.statusFilter,
       page: this.page,
       pageSize: this.pageSize,
     };
-    localStorage.setItem(RISK_LIST_PREFS_KEY, JSON.stringify(prefs));
+    writeListPrefs(RISK_LIST_PREFS_KEY, prefs);
   }
 
   #restoreSelections(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      const raw = sessionStorage.getItem(RISK_LIST_SELECTIONS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return;
-      this.selectedRiskIds = new Set(
-        parsed.filter((value): value is string => typeof value === 'string'),
-      );
-    } catch {
-      // Ignore invalid session-only selections.
-    }
+    this.selectedRiskIds = readSelectionSet(RISK_LIST_SELECTIONS_KEY);
   }
 
   #persistSelections(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    sessionStorage.setItem(RISK_LIST_SELECTIONS_KEY, JSON.stringify([...this.selectedRiskIds]));
+    writeSelectionSet(RISK_LIST_SELECTIONS_KEY, this.selectedRiskIds);
   }
 
   #viewBody(r: Risk): TemplateResult {
@@ -724,6 +794,7 @@ export class RisksView extends LitElement {
 
   #startEdit(r: Risk): void {
     this.editingId = r.id;
+    this.expandedRiskIds = new Set(this.expandedRiskIds).add(r.id);
     this.editTitle = r.title;
     this.editDescription = r.description ?? '';
     this.editLikelihood = r.likelihood;

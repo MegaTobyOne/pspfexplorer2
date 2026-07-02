@@ -26,6 +26,7 @@ import {
 import { appStoreContext } from '../state/contexts.ts';
 import type { AppStore } from '../state/app-store.ts';
 import { SignalWatcher } from '../state/signal-watcher.ts';
+import '../components/list-workbench.ts';
 
 function parseRequirementIds(raw: string): readonly ReturnType<typeof asRequirementId>[] {
   return raw
@@ -49,9 +50,26 @@ export class DirectionsView extends LitElement {
       :host {
         display: block;
       }
+      article {
+        display: grid;
+        gap: var(--space-3);
+      }
       h2 {
         margin: 0 0 var(--space-2) 0;
         font-size: var(--text-xl);
+      }
+      .layout {
+        display: block;
+      }
+      h3 {
+        margin: 0;
+        font-size: var(--text-md);
+      }
+      .panel-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
       }
       .intro {
         margin: 0 0 var(--space-3) 0;
@@ -80,14 +98,15 @@ export class DirectionsView extends LitElement {
       form.create,
       form.edit {
         display: grid;
-        grid-template-columns: 8rem 1fr 10rem 12rem auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
+        align-items: stretch;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
         margin-bottom: var(--space-3);
         background: var(--colour-bg-elevated);
+        min-width: 0;
       }
       form.create .full,
       form.edit .full {
@@ -174,6 +193,13 @@ export class DirectionsView extends LitElement {
         justify-content: space-between;
         gap: var(--space-2);
         align-items: flex-start;
+      }
+      .item-head-main {
+        display: grid;
+        gap: 2px;
+      }
+      .item-toggle {
+        white-space: nowrap;
       }
       .response-badge {
         display: inline-flex;
@@ -266,6 +292,7 @@ export class DirectionsView extends LitElement {
   @state() private accessor editEvidenceKind: EvidenceRef['kind'] = 'note';
   @state() private accessor editEvidenceValue = '';
   @state() private accessor copyStatus = '';
+  @state() private accessor expandedDirectionIds: ReadonlySet<DirectionId> = new Set();
 
   override willUpdate(changed: Map<PropertyKey, unknown>): void {
     super.willUpdate(changed);
@@ -288,43 +315,56 @@ export class DirectionsView extends LitElement {
           Track PSPF Directions, record whether each one has been dealt with, and copy a summary for
           Teams, email, or briefing packs.
         </p>
-        ${this.#summary(directions)} ${this.#createForm()}
-        <div class="toolbar">
-          <div class="filters">
-            <label class="field">
-              Show
-              <select
-                @change=${(e: Event): void => {
-                  this.filterState = (e.target as HTMLSelectElement).value as
-                    | DirectionResponseState
-                    | 'all';
-                }}
+        <pspf-list-workbench left-label="Direction controls" right-label="Direction list">
+          <div slot="left">
+            <h3>Summary and filters</h3>
+            <p class="panel-note">
+              Use the filter to narrow the register, then add a direction or copy the current
+              summary for a brief or meeting note.
+            </p>
+            ${this.#summary(directions)} ${this.#createForm()}
+            <div class="toolbar">
+              <div class="filters">
+                <label class="field">
+                  Show
+                  <select
+                    @change=${(e: Event): void => {
+                      this.filterState = (e.target as HTMLSelectElement).value as
+                        | DirectionResponseState
+                        | 'all';
+                    }}
+                  >
+                    <option value="all" ?selected=${this.filterState === 'all'}>
+                      All Directions
+                    </option>
+                    ${DIRECTION_RESPONSE_STATES.map(
+                      (state) =>
+                        html`<option value=${state} ?selected=${this.filterState === state}>
+                          ${directionResponseLabel(state)}
+                        </option>`,
+                    )}
+                  </select>
+                </label>
+              </div>
+              <button
+                type="button"
+                @click=${(): void => void this.#copyText(directionsRegisterSummary(filtered))}
               >
-                <option value="all" ?selected=${this.filterState === 'all'}>All Directions</option>
-                ${DIRECTION_RESPONSE_STATES.map(
-                  (state) =>
-                    html`<option value=${state} ?selected=${this.filterState === state}>
-                      ${directionResponseLabel(state)}
-                    </option>`,
-                )}
-              </select>
-            </label>
+                Copy register summary
+              </button>
+              ${this.copyStatus
+                ? html`<span class="copy-status" role="status">${this.copyStatus}</span>`
+                : ''}
+            </div>
           </div>
-          <button
-            type="button"
-            @click=${(): void => void this.#copyText(directionsRegisterSummary(filtered))}
-          >
-            Copy register summary
-          </button>
-          ${this.copyStatus
-            ? html`<span class="copy-status" role="status">${this.copyStatus}</span>`
-            : ''}
-        </div>
-        ${filtered.length === 0
-          ? html`<p class="empty" data-testid="empty">No Directions match the current view.</p>`
-          : html`<ul class="list">
-              ${filtered.map((d) => this.#renderItem(d))}
-            </ul>`}
+          <div slot="right">
+            ${filtered.length === 0
+              ? html`<p class="empty" data-testid="empty">No Directions match the current view.</p>`
+              : html`<ul class="list">
+                  ${filtered.map((d) => this.#renderItem(d))}
+                </ul>`}
+          </div>
+        </pspf-list-workbench>
       </article>
     `;
   }
@@ -462,39 +502,61 @@ export class DirectionsView extends LitElement {
 
   #renderItem(d: Direction): TemplateResult {
     if (this.editingId === d.id) return this.#renderEdit(d);
+    const isEditing = this.editingId === d.id;
+    const isExpanded = isEditing || this.expandedDirectionIds.has(d.id);
     return html`
       <li class="direction" data-id=${d.id}>
         <div class="item-head">
-          <div>
+          <div class="item-head-main">
             <strong>${d.title}</strong>
             <div class="ref">${d.reference}</div>
+            <div class="meta"><span>Issued: ${d.issuedAt}</span></div>
           </div>
-          <span class="response-badge" data-state=${d.responseState}>
-            ${directionResponseLabel(d.responseState)}
-          </span>
+          <div class="actions">
+            <span class="response-badge" data-state=${d.responseState}>
+              ${directionResponseLabel(d.responseState)}
+            </span>
+            <button
+              class="item-toggle"
+              type="button"
+              @click=${(): void => this.#toggleExpanded(d.id)}
+            >
+              ${isExpanded ? 'Close' : 'Open'}
+            </button>
+          </div>
         </div>
-        ${d.description ? html`<p>${d.description}</p>` : ''}
-        <div class="meta"><span>Issued: ${d.issuedAt}</span></div>
-        ${d.responseNotes ? html`<p class="response-notes">${d.responseNotes}</p>` : ''}
-        ${d.evidence.length > 0
-          ? html`<div class="evidence-list" aria-label="Evidence">
-              ${d.evidence.map((entry) => html`<span>${entry.kind}: ${entry.value}</span>`)}
-            </div>`
+        ${isExpanded
+          ? html`
+              ${d.description ? html`<p>${d.description}</p>` : ''}
+              ${d.responseNotes ? html`<p class="response-notes">${d.responseNotes}</p>` : ''}
+              ${d.evidence.length > 0
+                ? html`<div class="evidence-list" aria-label="Evidence">
+                    ${d.evidence.map((entry) => html`<span>${entry.kind}: ${entry.value}</span>`)}
+                  </div>`
+                : ''}
+              ${d.requirementIds.length > 0
+                ? html`<div class="req-list" aria-label="Linked requirements">
+                    ${d.requirementIds.map((id) => html`<a href="#/requirement/${id}">${id}</a>`)}
+                  </div>`
+                : ''}
+              <div class="actions">
+                <button @click=${(): void => this.#startEdit(d)}>Edit</button>
+                <button @click=${(): void => void this.#copyText(directionSummary(d))}>
+                  Copy summary
+                </button>
+                <button @click=${(): void => void this.#remove(d)}>Delete</button>
+              </div>
+            `
           : ''}
-        ${d.requirementIds.length > 0
-          ? html`<div class="req-list" aria-label="Linked requirements">
-              ${d.requirementIds.map((id) => html`<a href="#/requirement/${id}">${id}</a>`)}
-            </div>`
-          : ''}
-        <div class="actions">
-          <button @click=${(): void => this.#startEdit(d)}>Edit</button>
-          <button @click=${(): void => void this.#copyText(directionSummary(d))}>
-            Copy summary
-          </button>
-          <button @click=${(): void => void this.#remove(d)}>Delete</button>
-        </div>
       </li>
     `;
+  }
+
+  #toggleExpanded(id: DirectionId): void {
+    const next = new Set(this.expandedDirectionIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.expandedDirectionIds = next;
   }
 
   #renderEdit(d: Direction): TemplateResult {
@@ -625,6 +687,7 @@ export class DirectionsView extends LitElement {
 
   #startEdit(d: Direction): void {
     this.editingId = d.id;
+    this.expandedDirectionIds = new Set(this.expandedDirectionIds).add(d.id);
     this.editReference = d.reference;
     this.editTitle = d.title;
     this.editIssuedAt = d.issuedAt;

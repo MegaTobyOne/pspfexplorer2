@@ -12,17 +12,19 @@ import {
 import { appStoreContext } from '../state/contexts.ts';
 import type { AppStore } from '../state/app-store.ts';
 import { SignalWatcher } from '../state/signal-watcher.ts';
+import {
+  clearLocalValue,
+  clearSessionValue,
+  readListPrefs,
+  readSelectionSet,
+  writeListPrefs,
+  writeSelectionSet,
+  type PersistedListPrefs,
+} from '../state/list-preferences.ts';
+import '../components/list-workbench.ts';
 
 const ACTION_LIST_PREFS_KEY = 'pspf:action-list-prefs';
 const ACTION_LIST_SELECTIONS_KEY = 'pspf:action-list-selections';
-
-interface ActionListPrefs {
-  searchQuery: string;
-  sortMode: 'updated' | 'alpha';
-  statusFilter: ActionStatus | 'all';
-  page: number;
-  pageSize: number;
-}
 
 function isOverdue(a: Action): boolean {
   if (!a.dueAt) return false;
@@ -38,23 +40,41 @@ export class ActionsView extends LitElement {
       :host {
         display: block;
       }
+      article {
+        display: grid;
+        gap: var(--space-3);
+      }
       h2 {
         margin: 0 0 var(--space-3) 0;
         font-size: var(--text-xl);
       }
+      .layout {
+        display: block;
+      }
+      h3 {
+        margin: 0;
+        font-size: var(--text-md);
+      }
+      .panel-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-sm);
+        line-height: 1.5;
+      }
       form.create {
         display: grid;
-        grid-template-columns: 1fr 9rem 9rem 10rem auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
+        align-items: stretch;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
         margin-bottom: var(--space-3);
+        min-width: 0;
       }
       @media (max-width: 800px) {
         form.create {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
         }
       }
       label.field {
@@ -75,6 +95,18 @@ export class ActionsView extends LitElement {
         padding: var(--space-1) var(--space-2);
         width: 100%;
         box-sizing: border-box;
+        transition:
+          border-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease,
+          background-color var(--motion-fast) ease;
+      }
+      input:focus-visible,
+      textarea:focus-visible,
+      select:focus-visible,
+      button:focus-visible {
+        outline: none;
+        border-color: var(--colour-accent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--colour-accent) 24%, transparent);
       }
       textarea {
         min-height: 4rem;
@@ -88,6 +120,17 @@ export class ActionsView extends LitElement {
         border-radius: var(--radius-sm);
         padding: var(--space-1) var(--space-2);
         color: inherit;
+        transition:
+          transform var(--motion-fast) ease,
+          border-color var(--motion-fast) ease,
+          background-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease;
+      }
+      button:hover:not(:disabled),
+      button:focus-visible:not(:disabled) {
+        border-color: var(--colour-accent);
+        box-shadow: var(--shadow-1);
+        transform: translateY(-1px);
       }
       button.primary {
         background: var(--colour-accent);
@@ -107,27 +150,53 @@ export class ActionsView extends LitElement {
         gap: var(--space-2);
       }
       li.action {
+        position: relative;
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
+        border-left-width: 4px;
         border-radius: var(--radius-md);
         background: var(--colour-bg-elevated);
+        transition:
+          transform var(--motion-medium) ease,
+          border-color var(--motion-medium) ease,
+          box-shadow var(--motion-medium) ease,
+          background-color var(--motion-medium) ease;
       }
       li.action[data-overdue='true'] {
+        --action-accent: #b34a00;
         border-color: #b34a00;
+      }
+      li.action:hover,
+      li.action:focus-within {
+        transform: translateY(-1px);
+        border-color: var(--action-accent, var(--colour-border));
+        box-shadow: var(--shadow-2);
       }
       li.action header {
         display: flex;
         gap: var(--space-2);
         align-items: baseline;
         flex-wrap: wrap;
+        justify-content: space-between;
+      }
+      .item-header-main {
+        display: flex;
+        gap: var(--space-2);
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      .item-toggle {
+        white-space: nowrap;
       }
       .pill {
         display: inline-flex;
-        padding: 2px var(--space-1);
-        border-radius: var(--radius-sm);
+        padding: 0.25rem var(--space-2);
+        border-radius: 999px;
         font-size: var(--text-xs);
-        background: var(--colour-bg);
+        background: color-mix(in srgb, var(--colour-bg) 78%, var(--colour-fg) 22%);
         border: 1px solid var(--colour-border);
+        line-height: 1.2;
+        white-space: nowrap;
       }
       .pill.overdue {
         background: #b34a00;
@@ -153,6 +222,7 @@ export class ActionsView extends LitElement {
         border-radius: var(--radius-md);
         color: var(--colour-fg-muted);
         font-size: var(--text-sm);
+        background: var(--colour-bg-elevated);
       }
       .edit-grid {
         display: grid;
@@ -162,13 +232,9 @@ export class ActionsView extends LitElement {
       }
       .list-tools {
         display: grid;
-        grid-template-columns: minmax(14rem, 1fr) 12rem auto;
+        grid-template-columns: 1fr;
         gap: var(--space-2);
-        align-items: end;
-        padding: var(--space-3);
-        border: 1px solid var(--colour-border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-3);
+        min-width: 0;
       }
       .bulk-actions {
         display: flex;
@@ -196,10 +262,6 @@ export class ActionsView extends LitElement {
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        padding: var(--space-3);
-        border: 1px solid var(--colour-border);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-3);
       }
       .pagination .controls {
         display: flex;
@@ -244,6 +306,7 @@ export class ActionsView extends LitElement {
   @state() private statusFilter: ActionStatus | 'all' = 'all';
   @state() private page = 1;
   @state() private pageSize = 20;
+  @state() private expandedActionIds: ReadonlySet<string> = new Set();
 
   override connectedCallback(): void {
     super.connectedCallback();
@@ -278,22 +341,33 @@ export class ActionsView extends LitElement {
           Track remediation, uplift, review and investigation actions. Items past their due date are
           flagged as overdue (excluding done/cancelled).
         </p>
-        ${this.#createForm()}
-        ${allActions.length > 0 ? this.#listTools(allActions, visibleActions) : ''}
-        ${visibleActions.length > 0
-          ? this.#pagination(visibleActions.length, totalPages, page)
-          : ''}
-        ${actions.length === 0
-          ? html`<p class="empty">
-              ${allActions.length === 0
-                ? 'No actions recorded yet.'
-                : 'No actions match the current view.'}
-            </p>`
-          : html`
-              <ul class="actions">
-                ${actions.map((a) => this.#actionItem(a))}
-              </ul>
-            `}
+        <pspf-list-workbench left-label="Action controls" right-label="Action list">
+          <div slot="left">
+            <h3>Add action</h3>
+            <p class="panel-note">
+              Record the task, assign a type and due date, then narrow the list to what needs
+              attention now.
+            </p>
+            ${this.#createForm()}
+            ${allActions.length > 0 ? this.#listTools(allActions, visibleActions) : ''}
+          </div>
+          <div slot="right">
+            ${visibleActions.length > 0
+              ? this.#pagination(visibleActions.length, totalPages, page)
+              : ''}
+            ${actions.length === 0
+              ? html`<p class="empty">
+                  ${allActions.length === 0
+                    ? 'No actions recorded yet.'
+                    : 'No actions match the current view.'}
+                </p>`
+              : html`
+                  <ul class="actions">
+                    ${actions.map((a) => this.#actionItem(a))}
+                  </ul>
+                `}
+          </div>
+        </pspf-list-workbench>
       </article>
     `;
   }
@@ -508,26 +582,36 @@ export class ActionsView extends LitElement {
   #actionItem(a: Action): TemplateResult {
     const overdue = isOverdue(a);
     const isEditing = this.editingId === a.id;
+    const isExpanded = isEditing || this.expandedActionIds.has(a.id);
     const selected = this.selectedActionIds.has(a.id);
     return html`
       <li class="action" data-overdue=${overdue ? 'true' : 'false'}>
         <header>
-          <input
-            type="checkbox"
-            aria-label=${`Select action ${a.title}`}
-            .checked=${selected}
-            @change=${(e: Event): void =>
-              this.#toggleSelected(a.id, (e.target as HTMLInputElement).checked)}
-          />
-          <strong>${a.title}</strong>
-          <span class="pill">${a.type}</span>
-          <span class="pill">${a.status}</span>
-          ${a.dueAt
-            ? html`<span class="pill ${overdue ? 'overdue' : ''}">due ${a.dueAt}</span>`
-            : ''}
-          <span class="meta">updated ${a.updatedAt.slice(0, 10)}</span>
+          <div class="item-header-main">
+            <input
+              type="checkbox"
+              aria-label=${`Select action ${a.title}`}
+              .checked=${selected}
+              @change=${(e: Event): void =>
+                this.#toggleSelected(a.id, (e.target as HTMLInputElement).checked)}
+            />
+            <strong>${a.title}</strong>
+            <span class="pill">${a.type}</span>
+            <span class="pill">${a.status}</span>
+            ${a.dueAt
+              ? html`<span class="pill ${overdue ? 'overdue' : ''}">due ${a.dueAt}</span>`
+              : ''}
+            <span class="meta">updated ${a.updatedAt.slice(0, 10)}</span>
+          </div>
+          <button
+            class="item-toggle"
+            type="button"
+            @click=${(): void => this.#toggleExpanded(a.id)}
+          >
+            ${isExpanded ? 'Close' : 'Open'}
+          </button>
         </header>
-        ${isEditing ? this.#editForm(a) : this.#viewBody(a)}
+        ${isExpanded ? (isEditing ? this.#editForm(a) : this.#viewBody(a)) : ''}
       </li>
     `;
   }
@@ -569,6 +653,13 @@ export class ActionsView extends LitElement {
     this.selectedActionIds = new Set();
   }
 
+  #toggleExpanded(id: string): void {
+    const next = new Set(this.expandedActionIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.expandedActionIds = next;
+  }
+
   #resetListState(): void {
     this.searchQuery = '';
     this.sortMode = 'updated';
@@ -576,65 +667,38 @@ export class ActionsView extends LitElement {
     this.page = 1;
     this.pageSize = 20;
     this.selectedActionIds = new Set();
-    if (typeof localStorage !== 'undefined') localStorage.removeItem(ACTION_LIST_PREFS_KEY);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.removeItem(ACTION_LIST_SELECTIONS_KEY);
-    }
+    this.expandedActionIds = new Set();
+    clearLocalValue(ACTION_LIST_PREFS_KEY);
+    clearSessionValue(ACTION_LIST_SELECTIONS_KEY);
   }
 
   #restorePrefs(): void {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(ACTION_LIST_PREFS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<ActionListPrefs>;
-      this.searchQuery = typeof parsed.searchQuery === 'string' ? parsed.searchQuery : '';
-      this.sortMode = parsed.sortMode === 'alpha' ? 'alpha' : 'updated';
-      this.statusFilter =
-        parsed.statusFilter === 'all' ||
-        (typeof parsed.statusFilter === 'string' && ACTION_STATUSES.includes(parsed.statusFilter))
-          ? parsed.statusFilter
-          : 'all';
-      this.page = typeof parsed.page === 'number' && parsed.page > 0 ? Math.floor(parsed.page) : 1;
-      this.pageSize =
-        parsed.pageSize === 20 || parsed.pageSize === 50 || parsed.pageSize === 100
-          ? parsed.pageSize
-          : 20;
-    } catch {
-      // Ignore invalid persisted preferences.
-    }
+    const prefs = readListPrefs(ACTION_LIST_PREFS_KEY, ACTION_STATUSES);
+    if (!prefs) return;
+    this.searchQuery = prefs.searchQuery;
+    this.sortMode = prefs.sortMode;
+    this.statusFilter = prefs.statusFilter;
+    this.page = prefs.page;
+    this.pageSize = prefs.pageSize;
   }
 
   #persistPrefs(): void {
-    if (typeof localStorage === 'undefined') return;
-    const prefs: ActionListPrefs = {
+    const prefs: PersistedListPrefs<ActionStatus> = {
       searchQuery: this.searchQuery,
       sortMode: this.sortMode,
       statusFilter: this.statusFilter,
       page: this.page,
       pageSize: this.pageSize,
     };
-    localStorage.setItem(ACTION_LIST_PREFS_KEY, JSON.stringify(prefs));
+    writeListPrefs(ACTION_LIST_PREFS_KEY, prefs);
   }
 
   #restoreSelections(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    try {
-      const raw = sessionStorage.getItem(ACTION_LIST_SELECTIONS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as unknown;
-      if (!Array.isArray(parsed)) return;
-      this.selectedActionIds = new Set(
-        parsed.filter((value): value is string => typeof value === 'string'),
-      );
-    } catch {
-      // Ignore invalid session-only selections.
-    }
+    this.selectedActionIds = readSelectionSet(ACTION_LIST_SELECTIONS_KEY);
   }
 
   #persistSelections(): void {
-    if (typeof sessionStorage === 'undefined') return;
-    sessionStorage.setItem(ACTION_LIST_SELECTIONS_KEY, JSON.stringify([...this.selectedActionIds]));
+    writeSelectionSet(ACTION_LIST_SELECTIONS_KEY, this.selectedActionIds);
   }
 
   #viewBody(a: Action): TemplateResult {
@@ -711,6 +775,7 @@ export class ActionsView extends LitElement {
 
   #startEdit(a: Action): void {
     this.editingId = a.id;
+    this.expandedActionIds = new Set(this.expandedActionIds).add(a.id);
     this.editTitle = a.title;
     this.editDescription = a.description ?? '';
     this.editType = a.type;

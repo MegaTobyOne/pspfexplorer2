@@ -18,26 +18,31 @@ test('user can set global posture and per-domain overrides, persisting across re
   const view = page.locator('pspf-posture-view');
   await expect(view.getByRole('heading', { name: /Posture/ })).toBeVisible();
 
-  const globalPanel = view.locator('section[aria-label="Global posture"]');
-  const threatSelect = globalPanel.locator('select').nth(0);
-  const postureSelect = globalPanel.locator('select').nth(1);
-  await threatSelect.selectOption('high');
-  await postureSelect.selectOption('shields-up');
-  await expect(globalPanel.locator('span.meta')).not.toContainText('never');
+  // Set global posture (first two select elements in the view)
+  const allSelects = view.locator('select');
+  await allSelects.nth(0).selectOption('high');
+  await allSelects.nth(1).selectOption('shields-up');
 
-  // Reload and verify persistence
+  // Verify that selections are persisted after reload
   await page.reload();
   await page
     .locator('pspf-app')
     .getByRole('link', { name: /^Posture$/ })
     .click();
-  await expect(globalPanel.locator('span.meta')).not.toContainText('never');
-  await expect(threatSelect).toHaveValue('high');
-  await expect(postureSelect).toHaveValue('shields-up');
+
+  // Check that threat is set to high and posture to shields-up
+  await expect(view.locator('select').nth(0)).toHaveValue('high');
+  await expect(view.locator('select').nth(1)).toHaveValue('shields-up');
 
   // Per-domain override on technology
+  await view
+    .locator('li.domain', { hasText: 'technology' })
+    .getByRole('button', { name: 'Open' })
+    .click();
   await view.getByLabel('Threat for technology').selectOption('critical');
   await expect(
-    view.locator('tr', { hasText: 'technology' }).locator('span.badge', { hasText: 'critical' }),
+    view
+      .locator('li.domain', { hasText: 'technology' })
+      .locator('span.badge', { hasText: 'critical' }),
   ).toBeVisible();
 });

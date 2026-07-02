@@ -51,6 +51,12 @@ export class AnalyticsView extends LitElement {
         padding: var(--space-3);
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
+        background: var(--colour-bg);
+        transition:
+          transform var(--motion-medium) ease,
+          border-color var(--motion-medium) ease,
+          box-shadow var(--motion-medium) ease,
+          background-color var(--motion-medium) ease;
       }
       a.kpi {
         color: inherit;
@@ -58,7 +64,9 @@ export class AnalyticsView extends LitElement {
       }
       a.kpi:hover,
       a.kpi:focus-visible {
-        border-color: var(--colour-fg-muted);
+        border-color: var(--colour-accent);
+        box-shadow: var(--shadow-2);
+        transform: translateY(-1px);
         outline: none;
       }
       .kpi .value {
@@ -85,6 +93,12 @@ export class AnalyticsView extends LitElement {
         font-weight: 600;
         color: var(--colour-fg-muted);
       }
+      tbody tr:nth-child(even) td {
+        background: color-mix(in srgb, var(--colour-bg-elevated) 88%, var(--colour-fg) 12%);
+      }
+      tbody tr:hover td {
+        background: color-mix(in srgb, var(--colour-accent) 8%, var(--colour-bg-elevated));
+      }
       .bar {
         display: inline-block;
         height: 0.6rem;
@@ -105,6 +119,105 @@ export class AnalyticsView extends LitElement {
         gap: var(--space-2);
         flex-wrap: wrap;
         align-items: baseline;
+      }
+      .visual-grid {
+        display: grid;
+        gap: var(--space-3);
+        grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+      }
+      .viz-card {
+        border: 1px solid var(--colour-border);
+        border-radius: var(--radius-md);
+        background: var(--colour-bg);
+        padding: var(--space-3);
+        display: grid;
+        gap: var(--space-2);
+      }
+      .viz-title {
+        margin: 0;
+        font-size: var(--text-sm);
+        font-weight: 700;
+      }
+      .viz-note {
+        margin: 0;
+        color: var(--colour-fg-muted);
+        font-size: var(--text-xs);
+      }
+      .ring-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .ring {
+        width: 8.5rem;
+        aspect-ratio: 1;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: conic-gradient(var(--ring-segments));
+      }
+      .ring-hole {
+        width: 5.9rem;
+        aspect-ratio: 1;
+        border-radius: 999px;
+        background: var(--colour-bg-elevated);
+        border: 1px solid var(--colour-border);
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+      .ring-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .ring-label {
+        font-size: var(--text-xs);
+        color: var(--colour-fg-muted);
+      }
+      .stack {
+        height: 0.9rem;
+        border-radius: 999px;
+        overflow: hidden;
+        display: flex;
+        background: var(--colour-bg-elevated);
+        border: 1px solid var(--colour-border);
+      }
+      .stack > span {
+        height: 100%;
+        min-width: 2px;
+      }
+      .split-list {
+        display: grid;
+        gap: var(--space-1);
+      }
+      .split-item {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: var(--space-2);
+        align-items: center;
+        font-size: var(--text-xs);
+      }
+      .spark {
+        width: 100%;
+        height: 0.5rem;
+        border-radius: var(--radius-sm);
+        background: var(--colour-bg-elevated);
+        border: 1px solid var(--colour-border);
+        overflow: hidden;
+      }
+      .spark > span {
+        display: block;
+        height: 100%;
+        width: var(--pct, 0%);
+        background: var(--spark-colour, var(--colour-accent));
+      }
+      @media (max-width: 720px) {
+        th,
+        td {
+          padding-left: 0;
+          padding-right: 0;
+        }
       }
     `,
   ];
@@ -132,6 +245,17 @@ export class AnalyticsView extends LitElement {
     const statusCounts = actionStatusCounts(actions);
     const overdue = overdueActionCount(actions);
     const summaries = summariseAllDomains(compliance);
+    const riskTotal = bands.low + bands.medium + bands.high + bands.extreme;
+    const actionTotal = Object.values(statusCounts).reduce((sum, value) => sum + value, 0);
+
+    let runningCompliancePct = 0;
+    const complianceRing = COMPLIANCE_STATES.map((state) => {
+      const count = breakdown.byState[state];
+      const pct = breakdown.total === 0 ? 0 : (count / breakdown.total) * 100;
+      const from = runningCompliancePct;
+      runningCompliancePct += pct;
+      return `var(${complianceColourVar(state)}) ${from}% ${runningCompliancePct}%`;
+    }).join(', ');
 
     return html`
       <article>
@@ -176,6 +300,87 @@ export class AnalyticsView extends LitElement {
                 Directions needing response · addressed ${directionStats.addressedPct}%
               </div>
             </a>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Visual status charts">
+          <h3>Visual status snapshot</h3>
+          <div class="visual-grid">
+            <article class="viz-card" aria-label="Compliance mix chart">
+              <p class="viz-title">Compliance mix</p>
+              <p class="viz-note">
+                Includes all requirements, including not-set and not applicable.
+              </p>
+              <div class="ring-wrap">
+                <div
+                  class="ring"
+                  style=${`--ring-segments: ${complianceRing || '#334155 0% 100%'}`}
+                >
+                  <div class="ring-hole">
+                    <div>
+                      <div class="ring-value">${breakdown.compliantPct}%</div>
+                      <div class="ring-label">fully implemented</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="viz-card" aria-label="Risk severity split chart">
+              <p class="viz-title">Open risk severity split</p>
+              <div class="stack" role="img" aria-label="Risk severity proportions">
+                <span
+                  style=${`width:${riskTotal === 0 ? 0 : (bands.extreme / riskTotal) * 100}%; background: var(--colour-risk-extreme)`}
+                ></span>
+                <span
+                  style=${`width:${riskTotal === 0 ? 0 : (bands.high / riskTotal) * 100}%; background: var(--colour-risk-high)`}
+                ></span>
+                <span
+                  style=${`width:${riskTotal === 0 ? 0 : (bands.medium / riskTotal) * 100}%; background: var(--colour-risk-medium)`}
+                ></span>
+                <span
+                  style=${`width:${riskTotal === 0 ? 0 : (bands.low / riskTotal) * 100}%; background: var(--colour-risk-low)`}
+                ></span>
+              </div>
+              <div class="split-list">
+                ${(
+                  [
+                    ['Extreme', bands.extreme, 'var(--colour-risk-extreme)'],
+                    ['High', bands.high, 'var(--colour-risk-high)'],
+                    ['Medium', bands.medium, 'var(--colour-risk-medium)'],
+                    ['Low', bands.low, 'var(--colour-risk-low)'],
+                  ] as const
+                ).map(
+                  ([label, count, colour]) => html`
+                    <div class="split-item">
+                      <span class="legend" style=${`background:${colour}`}></span>
+                      <span>${label}</span>
+                      <strong>${count}</strong>
+                    </div>
+                  `,
+                )}
+              </div>
+            </article>
+
+            <article class="viz-card" aria-label="Action throughput chart">
+              <p class="viz-title">Action throughput by status</p>
+              <div class="split-list">
+                ${Object.entries(statusCounts).map(([status, count]) => {
+                  const pct = actionTotal === 0 ? 0 : Math.round((count / actionTotal) * 100);
+                  return html`
+                    <div class="split-item">
+                      <span>${status}</span>
+                      <span class="spark"
+                        ><span
+                          style=${`--pct:${pct}%; --spark-colour: var(--colour-action-${status})`}
+                        ></span
+                      ></span>
+                      <strong>${count}</strong>
+                    </div>
+                  `;
+                })}
+              </div>
+            </article>
           </div>
         </section>
 

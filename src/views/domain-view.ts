@@ -23,6 +23,10 @@ export class DomainView extends LitElement {
         font-size: var(--text-xl);
         margin: 0 0 var(--space-2) 0;
       }
+      article {
+        display: grid;
+        gap: var(--space-3);
+      }
       .description {
         margin: 0 0 var(--space-3) 0;
         color: var(--colour-fg-muted);
@@ -50,14 +54,27 @@ export class DomainView extends LitElement {
         border: 1px solid var(--colour-border);
         border-radius: var(--radius-md);
         background: var(--colour-bg-elevated);
+        transition:
+          transform var(--motion-medium) ease,
+          border-color var(--motion-medium) ease,
+          box-shadow var(--motion-medium) ease,
+          background-color var(--motion-medium) ease;
+      }
+      li.requirement:hover,
+      li.requirement:focus-within {
+        transform: translateY(-1px);
+        border-color: var(--colour-accent);
+        box-shadow: var(--shadow-2);
       }
       li.requirement a {
         color: inherit;
         text-decoration: none;
         font-weight: 600;
       }
-      li.requirement a:hover {
+      li.requirement a:hover,
+      li.requirement a:focus-visible {
         text-decoration: underline;
+        outline: none;
       }
       .placeholder {
         padding: var(--space-3);
@@ -65,6 +82,7 @@ export class DomainView extends LitElement {
         border-radius: var(--radius-md);
         color: var(--colour-fg-muted);
         font-size: var(--text-sm);
+        background: var(--colour-bg-elevated);
       }
       button.print {
         margin-bottom: var(--space-3);
@@ -75,6 +93,17 @@ export class DomainView extends LitElement {
         color: var(--colour-fg);
         cursor: pointer;
         font: inherit;
+        transition:
+          transform var(--motion-fast) ease,
+          border-color var(--motion-fast) ease,
+          box-shadow var(--motion-fast) ease;
+      }
+      button.print:hover,
+      button.print:focus-visible {
+        outline: none;
+        border-color: var(--colour-accent);
+        box-shadow: var(--shadow-1);
+        transform: translateY(-1px);
       }
       @media print {
         button.print {
@@ -105,7 +134,10 @@ export class DomainView extends LitElement {
       return html`
         <article>
           <h2>Unknown domain</h2>
-          <p class="placeholder">No domain matched the URL.</p>
+          <p class="placeholder">
+            No domain matched the URL. Go back to the home screen and choose a PSPF domain from the
+            overview cards.
+          </p>
         </article>
       `;
     }

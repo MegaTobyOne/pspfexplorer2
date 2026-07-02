@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { allDomains, allRequirements, requirementById, requirementsByDomain } from './index.ts';
+import {
+  allDomains,
+  allRequirements,
+  ismResources,
+  requirementById,
+  requirementsByDomain,
+} from './index.ts';
 import { DOMAIN_KEYS } from '../data/types.ts';
 
 describe('PSPF static data', () => {
@@ -47,5 +53,18 @@ describe('PSPF static data', () => {
       for (const r of rs) expect(r.domain).toBe(key);
     }
     expect(total).toBe(allRequirements.length);
+  });
+
+  it('provides ISM resource references for technology requirements', () => {
+    const tech = allRequirements.filter((r) => r.domain === 'technology');
+    expect(tech.length).toBeGreaterThan(0);
+    expect(
+      tech.every((r) => (r.references ?? []).some((ref) => ref.includes('cyber.gov.au'))),
+    ).toBe(true);
+  });
+
+  it('includes curated ISM resource metadata', () => {
+    expect(ismResources.length).toBeGreaterThanOrEqual(4);
+    expect(ismResources.some((resource) => resource.id === 'ism-oscal-releases')).toBe(true);
   });
 });

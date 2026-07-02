@@ -8,6 +8,7 @@ import { physicalDomain, physicalRequirements } from './physical.ts';
 import { riskDomain, riskRequirements } from './risk.ts';
 import { technologyDomain, technologyRequirements } from './technology.ts';
 import { essentialEightControls } from './essential-eight.ts';
+import { ismResources } from './ism-resources.ts';
 
 export const allDomains: readonly Domain[] = [
   governanceDomain,
@@ -25,7 +26,21 @@ export const allRequirements: readonly Requirement[] = [
   ...physicalRequirements,
   ...riskRequirements,
   ...technologyRequirements,
-];
+].map((requirement) => {
+  if (requirement.domain !== 'technology') return requirement;
+  const refs = new Set(requirement.references ?? []);
+  refs.add('ISM: https://www.cyber.gov.au/business-government/asds-cyber-security-frameworks/ism');
+  refs.add(
+    'ISM (June 2026): https://www.cyber.gov.au/sites/default/files/2026-06/Information%20security%20manual%20%28June%202026%29.pdf',
+  );
+  refs.add(
+    'ISM OSCAL releases: https://www.cyber.gov.au/business-government/asds-cyber-security-frameworks/ism/ism-oscal-releases',
+  );
+  return {
+    ...requirement,
+    references: [...refs],
+  };
+});
 
 export const requirementById: ReadonlyMap<RequirementId, Requirement> = new Map(
   allRequirements.map((r) => [r.id, r]),
@@ -37,3 +52,4 @@ export const requirementsByDomain: ReadonlyMap<string, readonly Requirement[]> =
 
 export type { Domain, Requirement, EssentialEightControl } from '../data/types.ts';
 export { essentialEightControls };
+export { ismResources };

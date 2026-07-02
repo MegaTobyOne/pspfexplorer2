@@ -26,8 +26,11 @@ test('user can create, edit and delete an action', async ({ page }) => {
   const item = view.locator('li.action').first();
   await expect(item).toContainText('Roll out MFA');
   await expect(item).toHaveAttribute('data-overdue', 'true');
+  await expect(item.getByRole('button', { name: 'Open' })).toBeVisible();
 
   // Mark as done — overdue flag should clear
+  await item.getByRole('button', { name: 'Open' }).click();
+  await expect(item.getByRole('button', { name: 'Close' })).toBeVisible();
   await item.getByRole('button', { name: 'Edit' }).click();
   await item.getByLabel('Status').selectOption('done');
   await item.getByRole('button', { name: 'Save' }).click();

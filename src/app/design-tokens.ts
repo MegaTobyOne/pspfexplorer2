@@ -7,20 +7,20 @@ import { css } from 'lit';
  */
 export const designTokens = css`
   :host {
-    /* Colours — dark theme baseline; light variant via prefers-color-scheme below. */
-    --colour-bg: #0b0f14;
-    --colour-bg-elevated: #131922;
-    --colour-fg: #e6edf3;
-    --colour-fg-muted: #8b96a3;
-    --colour-border: #1f2733;
-    --colour-accent: #4f8cff;
-    --colour-accent-fg: #ffffff;
+    /* Colours — dark theme baseline; overridden by selected theme variables. */
+    --colour-bg: var(--theme-colour-bg, #0b0f14);
+    --colour-bg-elevated: var(--theme-colour-bg-elevated, #131922);
+    --colour-fg: var(--theme-colour-fg, #e6edf3);
+    --colour-fg-muted: var(--theme-colour-fg-muted, #8b96a3);
+    --colour-border: var(--theme-colour-border, #1f2733);
+    --colour-accent: var(--theme-colour-accent, #4f8cff);
+    --colour-accent-fg: var(--theme-colour-accent-fg, #ffffff);
 
-    --colour-status-yes: #2dd4bf;
-    --colour-status-no: #ef4444;
-    --colour-status-risk-managed: #facc15;
-    --colour-status-not-applicable: #94a3b8;
-    --colour-status-not-set: #475569;
+    --colour-status-yes: var(--theme-colour-status-yes, #2dd4bf);
+    --colour-status-no: var(--theme-colour-status-no, #ef4444);
+    --colour-status-risk-managed: var(--theme-colour-status-risk-managed, #facc15);
+    --colour-status-not-applicable: var(--theme-colour-status-not-applicable, #94a3b8);
+    --colour-status-not-set: var(--theme-colour-status-not-set, #475569);
 
     /* Risk bands — graduated red/amber/green. */
     --colour-risk-extreme: #99182c;
@@ -82,16 +82,34 @@ export const designTokens = css`
     --motion-medium: 220ms;
   }
 
-  @media (prefers-color-scheme: light) {
-    :host {
-      --colour-bg: #f8fafc;
-      --colour-bg-elevated: #ffffff;
-      --colour-fg: #0f172a;
-      --colour-fg-muted: #475569;
-      --colour-border: #e2e8f0;
-      --colour-accent: #1d4ed8;
-      --colour-status-not-set: #cbd5e1;
-    }
+  :host([data-theme='light']) {
+    --theme-colour-bg: #f8fafc;
+    --theme-colour-bg-elevated: #ffffff;
+    --theme-colour-fg: #0f172a;
+    --theme-colour-fg-muted: #475569;
+    --theme-colour-border: #d8e0eb;
+    --theme-colour-accent: #1d4ed8;
+    --theme-colour-accent-fg: #ffffff;
+    --theme-colour-status-yes: #0f766e;
+    --theme-colour-status-no: #dc2626;
+    --theme-colour-status-risk-managed: #ca8a04;
+    --theme-colour-status-not-applicable: #64748b;
+    --theme-colour-status-not-set: #94a3b8;
+  }
+
+  :host([data-theme='colorful']) {
+    --theme-colour-bg: #09131d;
+    --theme-colour-bg-elevated: #132436;
+    --theme-colour-fg: #eef7ff;
+    --theme-colour-fg-muted: #9fc4de;
+    --theme-colour-border: #255275;
+    --theme-colour-accent: #ff7a18;
+    --theme-colour-accent-fg: #1f1303;
+    --theme-colour-status-yes: #00d27a;
+    --theme-colour-status-no: #ff4e88;
+    --theme-colour-status-risk-managed: #ffd23f;
+    --theme-colour-status-not-applicable: #7ad8ff;
+    --theme-colour-status-not-set: #5f7ea3;
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -27,8 +27,11 @@ test('user can create, edit and delete a risk', async ({ page }) => {
   const item = view.locator('li.risk').first();
   await expect(item).toContainText('Outdated patching cadence');
   await expect(item).toHaveAttribute('data-band', 'extreme'); // 4*5 = 20
+  await expect(item.getByRole('button', { name: 'Open' })).toBeVisible();
 
   // Edit (lower likelihood to bring band down)
+  await item.getByRole('button', { name: 'Open' }).click();
+  await expect(item.getByRole('button', { name: 'Close' })).toBeVisible();
   await item.getByRole('button', { name: 'Edit' }).click();
   await item.getByLabel('Likelihood').selectOption('2');
   await item.getByRole('button', { name: 'Save' }).click();

@@ -157,7 +157,9 @@ export class CoverageView extends LitElement {
                 return html`
                   <tr data-domain=${s.domain.key}>
                     <th scope="row">
-                      <a class="domain-link" href="#/domain/${s.domain.key}">${s.domain.name}</a>
+                      <a class="domain-link" href="#/requirements/${s.domain.key}"
+                        >${s.domain.name}</a
+                      >
                     </th>
                     ${COMPLIANCE_STATES.map(
                       (state) =>

@@ -8,6 +8,10 @@ import { AppStore } from '../state/app-store.ts';
 import { appStoreContext } from '../state/contexts.ts';
 import '../components/command-palette.ts';
 
+type AppTheme = 'dark' | 'light' | 'colorful';
+
+const THEME_STORAGE_KEY = 'pspf-theme';
+
 @customElement('pspf-app')
 export class PspfApp extends LitElement {
   static override styles = [
@@ -64,6 +68,34 @@ export class PspfApp extends LitElement {
         display: flex;
         gap: var(--space-2);
         align-items: center;
+      }
+
+      .theme-picker {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--colour-fg-muted);
+        font-size: var(--text-xs);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .theme-picker select {
+        font: inherit;
+        letter-spacing: 0;
+        text-transform: none;
+        font-weight: 600;
+        color: var(--colour-fg);
+        background: var(--colour-bg);
+        border: 1px solid var(--colour-border);
+        border-radius: var(--radius-sm);
+        padding: 0.15rem 0.35rem;
+      }
+
+      .theme-picker select:focus-visible {
+        outline: 2px solid var(--colour-accent);
+        outline-offset: 1px;
       }
 
       .tlp {
@@ -199,14 +231,24 @@ export class PspfApp extends LitElement {
   @state() private store: AppStore | undefined;
   @state() private bootError: string | undefined;
   @state() private activePath = '/';
+  @state() private theme: AppTheme = 'dark';
 
   @provide({ context: appStoreContext })
   private storeContext!: AppStore;
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.theme = this.loadTheme();
+    this.setAttribute('data-theme', this.theme);
     void import('../components/global-search.ts');
     void this.boot();
+  }
+
+  override updated(changed: PropertyValues): void {
+    if (changed.has('theme')) {
+      this.setAttribute('data-theme', this.theme);
+      this.persistTheme(this.theme);
+    }
   }
 
   private async boot(): Promise<void> {
@@ -235,6 +277,31 @@ export class PspfApp extends LitElement {
     return NAV_ROUTES.filter((route) => route.group === group);
   }
 
+  private loadTheme(): AppTheme {
+    try {
+      const raw = localStorage.getItem(THEME_STORAGE_KEY);
+      if (raw === 'dark' || raw === 'light' || raw === 'colorful') return raw;
+    } catch {
+      // Ignore storage access failures and keep the default.
+    }
+    return 'dark';
+  }
+
+  private persistTheme(theme: AppTheme): void {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Ignore storage access failures.
+    }
+  }
+
+  private onThemeChange = (event: Event): void => {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === 'dark' || value === 'light' || value === 'colorful') {
+      this.theme = value;
+    }
+  };
+
   private isActive(path: string): boolean {
     if (path === '/') return this.activePath === '/';
     return this.activePath === path || this.activePath.startsWith(`${path}/`);
@@ -262,6 +329,19 @@ export class PspfApp extends LitElement {
         </div>
         <pspf-global-search></pspf-global-search>
         <div class="header-labels">
+          <label class="theme-picker" for="theme-select">
+            Theme
+            <select
+              id="theme-select"
+              .value=${this.theme}
+              @change=${this.onThemeChange}
+              aria-label="Choose colour theme"
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="colorful">Colorful</option>
+            </select>
+          </label>
           <span class="classification" aria-label="Information classification"
             >OFFICIAL: Sensitive</span
           >

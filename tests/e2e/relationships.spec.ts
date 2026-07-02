@@ -32,10 +32,12 @@ test('user can record and remove a requirement-risk relationship', async ({ page
   await view.getByRole('combobox', { name: 'Direction' }).selectOption(directionId ?? '');
   await view.getByRole('button', { name: 'Add link' }).click();
 
-  const row = view.locator('tbody tr').first();
-  await expect(row).toContainText('Requirement ↔ Direction');
-  await expect(row).toContainText('GOV-001');
-  await expect(row).toContainText('DIR-001');
+  const item = view.locator('li.relationship').first();
+  await expect(item).toContainText('Requirement ↔ Direction');
+  await expect(item).toContainText('DIR-001');
+  await item.getByRole('button', { name: 'Open' }).click();
+  await expect(item).toContainText('GOV-001');
+  await expect(item).toContainText('DIR-001');
 
   // Survives reload
   await page.reload();
@@ -43,14 +45,12 @@ test('user can record and remove a requirement-risk relationship', async ({ page
     .locator('pspf-app')
     .getByRole('link', { name: /^Relationships$/ })
     .click();
-  await expect(page.locator('pspf-relationships-view tbody tr').first()).toContainText('GOV-001');
+  const persistedItem = page.locator('pspf-relationships-view li.relationship').first();
+  await persistedItem.getByRole('button', { name: 'Open' }).click();
+  await expect(persistedItem).toContainText('GOV-001');
 
   // Delete
   page.once('dialog', (d) => void d.accept());
-  await page
-    .locator('pspf-relationships-view tbody tr')
-    .first()
-    .getByRole('button', { name: /Delete/ })
-    .click();
+  await persistedItem.getByRole('button', { name: /Delete/ }).click();
   await expect(page.locator('pspf-relationships-view [data-testid="empty"]')).toBeVisible();
 });
