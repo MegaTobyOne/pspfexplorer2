@@ -12,7 +12,7 @@ test('user can log work on a requirement and remove it', async ({ page }) => {
   const home = page.locator('pspf-home-view');
   await expect(home).toBeVisible();
   await home.locator('a.card').first().click();
-  
+
   const reqsView = page.locator('pspf-requirements-view');
   await expect(reqsView).toBeVisible({ timeout: 10000 });
   await reqsView.getByRole('link').first().click();

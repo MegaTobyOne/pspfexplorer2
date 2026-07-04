@@ -39,7 +39,7 @@ export class HelpView extends LitElement {
         font-size: 0.85em;
       }
       a {
-        color: var(--colour-accent);
+        color: var(--colour-link);
       }
     `,
   ];

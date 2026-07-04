@@ -533,7 +533,7 @@ export class RelationshipMapView extends LitElement {
       }
       .mode-toggle button.active {
         background: var(--colour-accent, #2563eb);
-        color: var(--colour-bg, #fff);
+        color: var(--colour-accent-fg, #fff);
       }
       .board {
         display: grid;

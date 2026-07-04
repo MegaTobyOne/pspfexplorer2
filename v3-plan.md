@@ -434,7 +434,7 @@ Port `archive/v2/scripts/domains/*.js` → `src/pspf/*.ts`.
 25. ✅ Performance pass against budgets in brief §6.
 26. ✅ README rewrite for v3 Phase 1.
 27. ✅ SBOM step in release workflow.
-28. 🟡 Cutover: point Pages at v3 build; archive v2 site notice. _(deployment task; pending owner action)_
+28. 🟡 Cutover: point Pages at v3 build; archive v2 site notice. _(deployment task; pending owner action. Current app/test work is validated.)_
 
 Each step ends with: domain-layer Vitest passing, view changes covered by at least one Playwright assertion, manual smoke at the configured Pages base path.
 
@@ -488,6 +488,8 @@ Against brief §6 budgets:
 - 🔲 Mobile-friendly read-only mode.
 - 🔲 Pluggable PSPF release year.
 - 🔲 Optional service worker / PWA.
+
+_Note: the current v2 UI consolidation work, open-first list pattern, shared list preference helper, and related CI/E2E updates are complete and validated; the remaining checklist items here are the still-open Phase 3 / deployment tasks above._
 
 ---
 

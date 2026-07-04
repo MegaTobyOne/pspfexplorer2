@@ -27,7 +27,10 @@ test('navigates to a domain page and back to home', async ({ page }) => {
   await page.goto('./');
   const home = page.locator('pspf-home-view');
   await expect(home).toBeVisible();
-  await home.getByRole('link', { name: /Governance/ }).first().click();
+  await home
+    .getByRole('link', { name: /Governance/ })
+    .first()
+    .click();
 
   // Domain cards now link to the requirements list view
   const reqsView = page.locator('pspf-requirements-view');

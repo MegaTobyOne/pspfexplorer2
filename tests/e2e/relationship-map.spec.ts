@@ -459,7 +459,8 @@ test('relationship map supports layout switch, node search and URL focus', async
   await expect(layout).toBeVisible();
   await expect(layout).toBeEnabled();
   const currentLayout = await layout.inputValue();
-  
+  expect(currentLayout).toMatch(/^(lanes|cose|breadthfirst|concentric|grid)$/);
+
   // Switch to breadthfirst and verify
   await layout.selectOption('breadthfirst');
   await expect(layout).toHaveValue('breadthfirst', { timeout: 5000 });

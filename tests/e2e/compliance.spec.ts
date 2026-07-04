@@ -12,8 +12,11 @@ test('user can set compliance state and add evidence', async ({ page }) => {
   // Open a requirement via requirements list view
   const home = page.locator('pspf-home-view');
   await expect(home).toBeVisible();
-  await home.getByRole('link', { name: /Governance/ }).first().click();
-  
+  await home
+    .getByRole('link', { name: /Governance/ })
+    .first()
+    .click();
+
   const reqsView = page.locator('pspf-requirements-view');
   await expect(reqsView).toBeVisible({ timeout: 10000 });
   await reqsView.getByRole('link').first().click();

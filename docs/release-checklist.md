@@ -19,6 +19,7 @@ Manual smoke pass:
 
 Notes:
 
+- Current CI validation should keep the focused E2E specs for the navigation/compliance/work-log/relationship-map flows alongside the full `npm run test:e2e:prod` run. That combination matches the current open-first UI pattern and catches both targeted regressions and base-path/accessibility drift.
 - `npm run test:e2e:prod` uses the production root base path (`PSPF_BASE=/`) and catches lazy-route/base-path regressions.
 - `npm run sbom` generates from `package-lock.json` so CI avoids package metadata parsing issues in installed `node_modules`.
 - Re-run `npm run build` before `npm run perf:budget` if source files changed.

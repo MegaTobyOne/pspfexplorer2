@@ -68,7 +68,7 @@ export class CoverageView extends LitElement {
       }
       a.domain-link,
       a.summary-link {
-        color: var(--colour-accent);
+        color: var(--colour-link);
         text-decoration: none;
       }
       a.domain-link:hover,
