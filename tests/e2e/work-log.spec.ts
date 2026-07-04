@@ -8,9 +8,14 @@ test('user can log work on a requirement and remove it', async ({ page }) => {
   });
   await page.reload();
 
-  // Navigate to a requirement (via home → governance domain card)
-  await page.locator('pspf-home-view a.card').first().click();
-  await page.locator('pspf-domain-view a').first().click();
+  // Navigate to a requirement (via home → governance requirements list)
+  const home = page.locator('pspf-home-view');
+  await expect(home).toBeVisible();
+  await home.locator('a.card').first().click();
+  
+  const reqsView = page.locator('pspf-requirements-view');
+  await expect(reqsView).toBeVisible({ timeout: 10000 });
+  await reqsView.getByRole('link').first().click();
 
   const log = page.locator('pspf-work-log');
   await expect(log.getByRole('heading', { name: 'Work log' })).toBeVisible();

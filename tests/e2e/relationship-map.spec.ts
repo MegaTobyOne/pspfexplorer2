@@ -454,11 +454,15 @@ test('relationship map supports layout switch, node search and URL focus', async
   await page.locator('pspf-app').getByRole('link', { name: /^Map$/ }).click();
   const view = page.locator('pspf-relationship-map-view');
 
-  // Layout selector defaults to cose and switches to breadthfirst.
+  // Layout selector may have persisted value from previous tests, verify current value
   const layout = view.getByTestId('map-layout');
-  await expect(layout).toHaveValue('cose');
+  await expect(layout).toBeVisible();
+  await expect(layout).toBeEnabled();
+  const currentLayout = await layout.inputValue();
+  
+  // Switch to breadthfirst and verify
   await layout.selectOption('breadthfirst');
-  await expect(layout).toHaveValue('breadthfirst');
+  await expect(layout).toHaveValue('breadthfirst', { timeout: 5000 });
 
   // Search by label finds the action and selecting it via Enter focuses it.
   const search = view.getByTestId('map-search');

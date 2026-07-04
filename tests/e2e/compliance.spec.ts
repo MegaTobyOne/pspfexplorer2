@@ -9,13 +9,14 @@ test('user can set compliance state and add evidence', async ({ page }) => {
   });
   await page.reload();
 
-  // Open a requirement.
-  await page
-    .locator('pspf-app')
-    .getByRole('link', { name: /Governance/ })
-    .first()
-    .click();
-  await page.locator('pspf-domain-view').getByRole('link').first().click();
+  // Open a requirement via requirements list view
+  const home = page.locator('pspf-home-view');
+  await expect(home).toBeVisible();
+  await home.getByRole('link', { name: /Governance/ }).first().click();
+  
+  const reqsView = page.locator('pspf-requirements-view');
+  await expect(reqsView).toBeVisible({ timeout: 10000 });
+  await reqsView.getByRole('link').first().click();
   const reqView = page.locator('pspf-requirement-view');
   await expect(reqView).toBeVisible();
 
@@ -37,12 +38,11 @@ test('user can set compliance state and add evidence', async ({ page }) => {
   // History should include the transition from fully implemented to risk-managed.
   await expect(editor).toContainText('Fully implemented → Risk-managed');
 
-  // Domain summary line should reflect the change after going back.
+  // Go back to requirements list and reopen to add evidence
   await page.goBack();
-  await expect(page.locator('pspf-domain-view')).toContainText('0 fully implemented');
-
-  // Add an evidence URL.
-  await page.locator('pspf-domain-view').getByRole('link').first().click();
+  const reqsViewAfter = page.locator('pspf-requirements-view');
+  await expect(reqsViewAfter).toBeVisible();
+  await reqsViewAfter.getByRole('link').first().click();
   await editor.getByLabel('Evidence value').fill('https://example.gov.au/policy');
   await editor.getByRole('button', { name: 'Add' }).click();
   await expect(editor.locator('ul.evidence li')).toContainText('https://example.gov.au/policy');

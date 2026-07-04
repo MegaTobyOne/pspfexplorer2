@@ -6,7 +6,8 @@ test('home view renders all six domains and links to domain pages', async ({ pag
   await expect(app).toBeVisible();
 
   // Wait for store boot + router mount.
-  await expect(app.getByRole('heading', { name: 'PSPF domains' })).toBeVisible();
+  const home = page.locator('pspf-home-view');
+  await expect(home.getByRole('heading', { level: 2, name: 'PSPF domains' })).toBeVisible();
   await expect(app).toContainText('OFFICIAL: Sensitive');
   await expect(app).toContainText('TLP:AMBER+STRICT');
   await expect(page.locator('pspf-home-view pspf-breadcrumbs')).toContainText('Home');
@@ -24,19 +25,19 @@ test('home view renders all six domains and links to domain pages', async ({ pag
 
 test('navigates to a domain page and back to home', async ({ page }) => {
   await page.goto('./');
-  await page
-    .locator('pspf-app')
-    .getByRole('link', { name: /Governance/ })
-    .first()
-    .click();
+  const home = page.locator('pspf-home-view');
+  await expect(home).toBeVisible();
+  await home.getByRole('link', { name: /Governance/ }).first().click();
 
-  await expect(page.locator('pspf-domain-view')).toBeVisible();
-  await expect(page.locator('pspf-domain-view').getByRole('heading')).toHaveText(/Governance/);
-  await expect(page.locator('pspf-domain-view pspf-breadcrumbs')).toContainText('Home');
-  await expect(page.locator('pspf-domain-view pspf-breadcrumbs')).toContainText('Governance');
+  // Domain cards now link to the requirements list view
+  const reqsView = page.locator('pspf-requirements-view');
+  await expect(reqsView).toBeVisible({ timeout: 10000 });
+  await expect(reqsView.getByRole('heading', { level: 2 })).toHaveText('Governance');
+  await expect(reqsView.locator('pspf-breadcrumbs')).toContainText('Home');
+  await expect(reqsView.locator('pspf-breadcrumbs')).toContainText('Governance');
 
   // First requirement link should navigate to a requirement view.
-  await page.locator('pspf-domain-view').getByRole('link').first().click();
+  await reqsView.getByRole('link').first().click();
   const reqView = page.locator('pspf-requirement-view');
   await expect(reqView).toBeVisible();
   await expect(reqView.locator('pspf-breadcrumbs')).toContainText('Home');
@@ -52,7 +53,8 @@ test('unknown route shows the not-found view', async ({ page }) => {
 test('top bar search opens matching PSPF requirements', async ({ page }) => {
   await page.goto('./');
   const app = page.locator('pspf-app');
-  await expect(app.getByRole('heading', { name: 'PSPF domains' })).toBeVisible();
+  const home = page.locator('pspf-home-view');
+  await expect(home.getByRole('heading', { level: 2, name: 'PSPF domains' })).toBeVisible();
 
   await app.getByPlaceholder('Search PSPF...').fill('GOV-001');
   await expect(app.getByRole('listbox', { name: 'Search results' })).toContainText('GOV-001');

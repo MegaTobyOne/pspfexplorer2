@@ -13,7 +13,7 @@ export const designTokens = css`
     --colour-fg: var(--theme-colour-fg, #e6edf3);
     --colour-fg-muted: var(--theme-colour-fg-muted, #8b96a3);
     --colour-border: var(--theme-colour-border, #1f2733);
-    --colour-accent: var(--theme-colour-accent, #4f8cff);
+    --colour-accent: var(--theme-colour-accent, #2563eb);
     --colour-accent-fg: var(--theme-colour-accent-fg, #ffffff);
 
     --colour-status-yes: var(--theme-colour-status-yes, #2dd4bf);
